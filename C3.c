@@ -30,7 +30,7 @@ int main(){
     //Reading numbers from file and adding 
     while(fgets(str,10,fp)!=NULL)sum+=sti(str);
      
-    printf("Sum: %lu",sum);
+    printf("Sum: %lu\n",sum);
     
     return 0;
 
