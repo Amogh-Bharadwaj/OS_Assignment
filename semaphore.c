@@ -2,7 +2,7 @@
 #include<stdlib.h>
 #include <pthread.h>
 #include<semaphore.h>
- 
+#include <unistd.h>
  
  
 sem_t sema1;
@@ -26,7 +26,7 @@ void* c3(void *arg)
         sem_post(&sema3);
  
  
-    }while(fgets(str,10,fp)!=NULL)
+    }while(fgets(str,10,fp)!=NULL);
  
   pthread_exit(NULL);
  
@@ -48,7 +48,7 @@ void* c2(void *arg)
         printf("%d\n" , num);
         sem_post(&sema2);
  
-    }while(fgets(str,10,fp1)!=NULL)
+    }while(fgets(str,10,fp1)!=NULL);
  
   pthread_exit(NULL);
  
@@ -84,9 +84,9 @@ void* c1c(void *arg){
  
 int main(int argc , char *argv [])
 {
-    p_thread_t thread_c1;
-    p_thread_t thread_c2;
-    p_thread_t thread_c3;
+    pthread_t thread_c1;
+    pthread_t thread_c2;
+    pthread_t thread_c3;
     sem_init(&sema1, 0 , 0);
     sem_init(&sema2, 0 , 0);
     sem_init(&sema3, 0 , 0);
