@@ -2,11 +2,6 @@
 #include<stdlib.h>
 #include <pthread.h>
  
- 
- 
- 
- 
- 
 pthread_mutex_t mutex1;
 pthread_mutex_t mutex2;
 pthread_mutex_t mutex3;
@@ -28,7 +23,7 @@ void* c3(void *arg)
         pthread_mutex_unlock(&mutex1);
  
  
-    }while(fgets(str,10,fp)!=NULL)
+    }while(fgets(str,10,fp)!=NULL);
  
   pthread_exit(NULL);
  
@@ -50,7 +45,7 @@ void* c2(void *arg)
         printf("%d\n" , num);
         pthread_mutex_unlock(&mutex2);
  
-    }while(fgets(str,10,fp1)!=NULL)
+    }while(fgets(str,10,fp1)!=NULL);
  
   pthread_exit(NULL);
  
@@ -86,9 +81,9 @@ void* c1c(void *arg){
  
 int main(int argc , char *argv [])
 {
-    p_thread_t thread_c1;
-    p_thread_t thread_c2;
-    p_thread_t thread_c3;
+    pthread_t thread_c1;
+    pthread_t thread_c2;
+    pthread_t thread_c3;
     pthread_mutex_init(&mutex1, NULL);
     pthread_mutex_init(&mutex2,NULL);
     pthread_mutex_init(&mutex3,NULL);
