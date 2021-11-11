@@ -11,6 +11,10 @@
 #include <sys/shm.h>
 #include <pthread.h>
 
+pthread_mutex_t mutex1;
+pthread_mutex_t mutex2;
+pthread_mutex_t mutex3;
+
 char* shared_memory;
 
 union void_cast {
@@ -56,14 +60,11 @@ void* C3_execution_function(void *arg)
     
 
     do {
-        
-		while(shared_memory!="C3 wake up"){
-            printf("[C3]: Locked by monitor...\n");
-            //printf("Shared memory inside C3: %s\n",shared_memory);
-            sleep(1);
-        }
+        printf("[C3]: Locked by monitor...\n");
+		pthread_mutex_lock(&mutex3);
 
         sum += atoi(str);
+        pthread_mutex_unlock(&mutex3);
     }while(fgets(str,10,fp)!=NULL);
 
 
@@ -78,17 +79,13 @@ void* C3_monitor_function(void *arg){
         sleep(1);
         printf("[C3 MONITOR THREAD]: Locking execution thread.\n");
         
-        int shmid = shmget(ftok("./",65),1024,0666|IPC_CREAT);
-        shared_memory=(char*) shmat(shmid,(void*)0,0);
-
-        shared_memory="C3 go to sleep";
+        pthread_mutex_lock(&mutex3);
         
+        sleep(3);
         
         printf("[C3 MONITOR THREAD]: Unlocking execution thread.\n");
         
-        shared_memory="C3 wake up";
-
-		printf("[C3 MONITOR THREAD]: Shared memory: %s",shared_memory);
+        pthread_mutex_unlock(&mutex3);
         sleep(1);
 
     }
@@ -105,14 +102,10 @@ void* C2_execution_function(void *arg)
     
 	do{
 
-		while(shared_memory!="C2 wake up"){
-            printf("[C2]: Locked by monitor...\n");
-            //printf("Shared memory inside C2: %s\n",shared_memory);
-            sleep(1);
-        }
-
+		pthread_mutex_lock(&mutex2);
         int num = atoi(str);
         printf("%d\n" , num);
+        pthread_mutex_unlock(&mutex2);
       } while(fgets(str,10,fp1)!=NULL);
 	
 	shared_memory="Die,C2";
@@ -127,17 +120,12 @@ void* C2_monitor_function(void *arg){
         sleep(1);
         printf("[C2 MONITOR THREAD]: Locking execution thread.\n");
         
-        int shmid = shmget(ftok("./",65),1024,0666|IPC_CREAT);
-        shared_memory=(char*) shmat(shmid,(void*)0,0);
-
-        shared_memory="C2 go to sleep";
+        pthread_mutex_lock(&mutex2);
         
         
         printf("[C2 MONITOR THREAD]: Unlocking execution thread.\n");
         
-        shared_memory="C2 wake up";
-
-		printf("[C2 MONITOR THREAD]: Shared memory: %s",shared_memory);
+        pthread_mutex_unlock(&mutex2);
         sleep(1);
 
     }
@@ -154,17 +142,8 @@ void* C1_execution_function(void* argument){
     scanf("%d",&n);
 
     for(int i=0;i<n;i++){ 
+        pthread_mutex_lock(&mutex1);
         
-        
-        while(shared_memory!="C1 wake up"){
-            printf("[C1]: Locked by monitor...\n");
-            //printf("[C1]: Shared memory inside the while loop: %s\n",shared_memory);
-
-            sleep(1);
-        }
-          
-        printf("Shared memory after the while loop: %s\n",shared_memory);
-                
         printf("[C1]: Unlocked by monitor...\n");
         
         //Critical section
@@ -172,6 +151,7 @@ void* C1_execution_function(void* argument){
         scanf("[C1]: Enter a number: %d\n",&x);
         arg += x;  
         //printf("[C1]: Executing.\n");
+        pthread_mutex_unlock(&mutex1);
            
     }
     printf("[C1]: SUM: %d\n",arg);
@@ -185,18 +165,12 @@ void* C1_monitor_function(){
         sleep(1);
         printf("[C1 MONITOR THREAD]: Locking execution thread.\n");
         
-        int shmid = shmget(ftok("./",65),1024,0666|IPC_CREAT);
-        shared_memory=(char*) shmat(shmid,(void*)0,0);
-
-        shared_memory="C1 go to sleep";
-        printf("Shared memory: %s",shared_memory);
+        pthread_mutex_lock(&mutex1);
+        sleep(3);
         
         printf("[C1 MONITOR THREAD]: Unlocking execution thread.\n");
         
-        shared_memory="C1 wake up";
-        sleep(1);
-
-        printf("[C1 MONITOR THREAD]: Shared memory: %s\n",shared_memory);
+        pthread_mutex_unlock(&mutex1);
         sleep(1);
     }
     printf("[C1 MONITOR THREAD] I'm done.");
