@@ -77,10 +77,11 @@ void* C3_execution_function(void *arg)
 
     char str[8];
 	int sum=0;
+    int shmid3;
 
     do {
 
-        int shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
+        shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
         C3_memory=(char*) shmat(shmid3,(void*)0,0);
         
         // C3 is asleep until monitor tells to wake up.
@@ -94,7 +95,7 @@ void* C3_execution_function(void *arg)
     }while(fgets(str,10,fp)!=NULL);
 
     
-    int shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
+    shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
     C3_memory=(char*) shmat(shmid3,(void*)0,0);
     
     // Intimating to C3-monitor thread that C3 is over.
@@ -151,7 +152,7 @@ void* C3_monitor_function(void *arg){
             // If scheduler tells to start
             if(MC3_memory=="C3 Start"){
                 
-               int shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
+               shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
                C3_memory=(char*) shmat(shmid3,(void*)0,0);
                 
                 // Then C3 will start.
@@ -173,9 +174,9 @@ void* C2_execution_function(void *arg)
     fp1 = fopen("n2.txt","r");
     char str[8];
 
-    
+    int shmid2;
 	do{
-        int shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
+        shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
         C2_memory=(char*) shmat(shmid2,(void*)0,0);
 
 		while(C2_memory!="Start"){
@@ -189,7 +190,7 @@ void* C2_execution_function(void *arg)
       } while(fgets(str,10,fp1)!=NULL);
 
 
-    int shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
+    shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
     C2_memory=(char*) shmat(shmid2,(void*)0,0);
 
     // Intimating to monitor that C2 is over.
@@ -207,7 +208,7 @@ void* C2_monitor_function(void *arg){
     
         printf("[C2 MONITOR THREAD]: Locking execution thread.\n");
 
-        int shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
+        shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
         C2_memory=(char*) shmat(shmid2,(void*)0,0);
        
        // Monitor dies when C2 dies.
@@ -246,7 +247,7 @@ void* C2_monitor_function(void *arg){
             // If scheduler says to start.
             if(MC2_memory=="C2 Start"){
 
-                 int shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
+                 shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
                  C2_memory=(char*) shmat(shmid2,(void*)0,0);
                 // Monitor will tell execution thread to start.
                 C2_memory="Start";
@@ -272,10 +273,11 @@ void* C1_execution_function(void* argument){
     
     printf("Checking outside\n");
 
+    int shmid1;
     for(int i=0;i<n;i++){ 
         printf("Checking inside\n");
 
-        int shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
+        shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
         C1_memory=(char*) shmat(shmid1,(void*)0,0);
         
         // Unless monitor tells me to start, I will be asleep.
@@ -300,7 +302,7 @@ void* C1_execution_function(void* argument){
     }
     printf("[C1]: SUM: %d\n",arg);
     
-    int shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
+    shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
     C1_memory=(char*) shmat(shmid1,(void*)0,0);
 
     // Intimating to monitor that execution is over.
@@ -318,7 +320,7 @@ void* C1_monitor_function(){
         sleep(1);
         printf("[C1 MONITOR THREAD]: Locking execution thread.\n");
 
-        int shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
+        shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
         C1_memory=(char*) shmat(shmid1,(void*)0,0);
         
         // If C1 is over, monitor thread should terminate.
@@ -329,7 +331,7 @@ void* C1_monitor_function(){
 
             if(MC1_memory=="C1 Stop"){
 
-                int shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
+                shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
                 C1_memory=(char*) shmat(shmid1,(void*)0,0);
 
                 C1_memory="Stop";
@@ -360,7 +362,7 @@ void* C1_monitor_function(){
            
             // If scheduler says to start.
             if(MC1_memory=="C1 Start"){
-                int shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
+                shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
                 C1_memory=(char*) shmat(shmid1,(void*)0,0);
                 
                 // Monitor tells execution thread to start.
