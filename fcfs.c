@@ -1,6 +1,6 @@
 
 // FCFS Code
-// TO BE FIXED: Critical section being skipped and C1 not terminating.
+// TO BE FIXED: Critical section being skipped [Not performing input of numbers] and C1 not terminating.
 
 
 #define _GNU_SOURCE
@@ -503,14 +503,17 @@ int main()
                 wait(NULL);
  
                 int c1_sum,c3_sum;
-
+                
+                // Getting message via pipe from C1.
                 read(p1[0],&c1_sum,sizeof(c1_sum));
                 close(p1[0]);
                 printf("C1 output: %d\n",c1_sum);
 
-                //getting message via pipe from C3
+                //getting message via pipe from C3.
                 read(p3[0],&c3_sum,sizeof(c3_sum));
                 close(p3[0]);
+
+                
             }
         }
         }
