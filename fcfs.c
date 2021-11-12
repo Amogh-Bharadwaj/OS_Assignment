@@ -113,7 +113,7 @@ void* C3_monitor_function(void *arg){
         
         printf("[C3 MONITOR THREAD]: Locking execution thread.\n");
 
-       int shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
+       shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
        C3_memory=(char*) shmat(shmid3,(void*)0,0);
        
        // C3 Monitor will die when C3 dies.
@@ -126,7 +126,7 @@ void* C3_monitor_function(void *arg){
             // When scheduler tells to stop.
             if(MC3_memory=="C3 Stop"){
                 
-               int shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
+               shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
                C3_memory=(char*) shmat(shmid3,(void*)0,0);
                 
                 // Monitor tells execution thread to stop.
@@ -138,7 +138,7 @@ void* C3_monitor_function(void *arg){
 
         printf("[C3 MONITOR THREAD]: Unlocking execution thread.\n");
 
-       int shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
+       shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
        C3_memory=(char*) shmat(shmid3,(void*)0,0);
        
        // C3 Monitor dies when C3 dies.
@@ -212,7 +212,7 @@ void* C2_monitor_function(void *arg){
        
        // Monitor dies when C2 dies.
        if(C2_memory!="Die"){
-            int shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
+            shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
             C2_memory=(char*) shmat(shmid2,(void*)0,0);
 
 
@@ -222,7 +222,7 @@ void* C2_monitor_function(void *arg){
             // If scheduler tells to stop
             if(MC2_memory=="C2 Stop"){
                 
-                int shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
+                shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
                 C2_memory=(char*) shmat(shmid2,(void*)0,0);
                 
                 // Monitor tells execution to stop.
@@ -234,7 +234,7 @@ void* C2_monitor_function(void *arg){
 
         printf("[C2 MONITOR THREAD]: Unlocking execution thread.\n");
 
-        int shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
+        shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
         C2_memory=(char*) shmat(shmid2,(void*)0,0);
 
         
@@ -264,11 +264,16 @@ void* C2_monitor_function(void *arg){
 void* C1_execution_function(void* argument){
 
     int arg = VOID_TO_INT(argument);
-    printf("Enter number of values when execution thread isn't sleeping:\n");
-    int n;
-    scanf("%d",&n);
+    //printf("Enter number of values when executiossssn thread isn't sleeping:\n");
+    
+    int n=2;
+    //scanf("%d",&n);
+    printf("After input\n");
+    
+    printf("Checking outside\n");
 
     for(int i=0;i<n;i++){ 
+        printf("Checking inside\n");
 
         int shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
         C1_memory=(char*) shmat(shmid1,(void*)0,0);
@@ -332,7 +337,7 @@ void* C1_monitor_function(){
         }
         else break;
        
-       int shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
+       shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
        C1_memory=(char*) shmat(shmid1,(void*)0,0);
         printf("[C1 MONITOR THREAD]: Shared memory: %s",C1_memory);
 
@@ -342,7 +347,7 @@ void* C1_monitor_function(){
        
 
 
-        int shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
+        shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
         C1_memory=(char*) shmat(shmid1,(void*)0,0);
         
         // If C1 is over, then we terminate this monitor thread.
@@ -451,7 +456,7 @@ int main()
     }
 
         else {
-        //wait(NULL);
+        wait(NULL);
 		pid1 = fork();
 		if (pid1 == 0) {
             //C2
@@ -472,7 +477,7 @@ int main()
     		pthread_join(C2_monitor_thread, NULL);
 		}
 		else {
-            //wait(NULL);
+            wait(NULL);
 			pid2 = fork();
 			if (pid2 == 0) {
 
@@ -503,7 +508,7 @@ int main()
             }
             else{
 
-                //wait(NULL);
+                wait(NULL);
  
                 int c1_sum,c3_sum;
                 
