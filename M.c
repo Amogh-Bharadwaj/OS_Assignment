@@ -15,7 +15,10 @@ pthread_mutex_t mutex1;
 pthread_mutex_t mutex2;
 pthread_mutex_t mutex3;
 
-char* shared_memory;
+char* C1_memory;
+char* C2_memory;
+char* C3_memory;
+char* results1,results3;
 
 union void_cast {
     void* ptr;
@@ -49,6 +52,20 @@ int sti(char s[]){
     return num;
 }
 
+int sti2(char* s){
+    int num = 0;
+    int l = strlen(s);
+   
+    for(int i=0;i<l-1;i++){
+        num+=(int)(s[i]-'0');
+        num*=10;
+    }
+    
+    num=num/10;
+
+    return num;
+}
+
 void* C3_execution_function(void *arg)
 {
  
@@ -68,24 +85,24 @@ void* C3_execution_function(void *arg)
     }while(fgets(str,10,fp)!=NULL);
 
 
-  shared_memory="Die,C3";
+  C3_memory="Die,C3";
   pthread_exit(NULL);
  
 }
  
 void* C3_monitor_function(void *arg){
-	while(shared_memory!="Die,C3"){
+	while(C3_memory!="Die,C3"){
         //Just for smooth running, we put to sleep for a few seconds.
         sleep(1);
         printf("[C3 MONITOR THREAD]: Locking execution thread.\n");
         
-        pthread_mutex_lock(&mutex3);
+        if(C3_memory=="Lock C3")pthread_mutex_lock(&mutex3);
         
         sleep(3);
         
         printf("[C3 MONITOR THREAD]: Unlocking execution thread.\n");
         
-        pthread_mutex_unlock(&mutex3);
+        if(C3_memory=="Wake C3")pthread_mutex_unlock(&mutex3);
         sleep(1);
 
     }
@@ -108,24 +125,24 @@ void* C2_execution_function(void *arg)
         pthread_mutex_unlock(&mutex2);
       } while(fgets(str,10,fp1)!=NULL);
 	
-	shared_memory="Die,C2";
+	C2_memory="Die,C2";
  
   pthread_exit(NULL);
  
 }
  
 void* C2_monitor_function(void *arg){
-	while(shared_memory!="Die,C2"){
+	while(C2_memory!="Die,C2"){
         //Just for smooth running, we put to sleep for a few seconds.
         sleep(1);
         printf("[C2 MONITOR THREAD]: Locking execution thread.\n");
         
-        pthread_mutex_lock(&mutex2);
+        if(C2_memory=="Lock C2")pthread_mutex_lock(&mutex2);
         
         
         printf("[C2 MONITOR THREAD]: Unlocking execution thread.\n");
         
-        pthread_mutex_unlock(&mutex2);
+        if(C2_memory=="Wake C2")pthread_mutex_unlock(&mutex2);
         sleep(1);
 
     }
@@ -155,22 +172,22 @@ void* C1_execution_function(void* argument){
            
     }
     printf("[C1]: SUM: %d\n",arg);
-    shared_memory="Die,C1";
+    C1_memory="Die,C1";
 }
 
 void* C1_monitor_function(){
     
-    while(shared_memory!="Die,C1"){
+    while(C1_memory!="Die,C1"){
         //Just for smooth running, we put to sleep for a few seconds.
         sleep(1);
-        printf("[C1 MONITOR THREAD]: Locking execution thread.\n");
+        //printf("[C1 MONITOR THREAD]: Locking execution thread.\n");
         
-        pthread_mutex_lock(&mutex1);
+        if(C1_memory=="Lock C1")pthread_mutex_lock(&mutex1);
         sleep(3);
         
         printf("[C1 MONITOR THREAD]: Unlocking execution thread.\n");
         
-        pthread_mutex_unlock(&mutex1);
+        if(C1_memory=="Wake C1")pthread_mutex_unlock(&mutex1);
         sleep(1);
     }
     printf("[C1 MONITOR THREAD] I'm done.");
@@ -194,7 +211,25 @@ int main()
 		fprintf(stderr, "Pipe Failed" );
 		return 1;
 	}
- 
+
+   
+    // List of all shared memories.
+    int shmid1 = shmget(ftok("/etc",65),1024,0666|IPC_CREAT);
+    C1_memory=(char*) shmat(shmid1,(void*)0,0);
+
+    int shmid2 = shmget(ftok("/var",65),1024,0666|IPC_CREAT);
+    C2_memory=(char*) shmat(shmid2,(void*)0,0);
+
+    int shmid3 = shmget(ftok("/dev",65),1024,0666|IPC_CREAT);
+    C3_memory=(char*) shmat(shmid3,(void*)0,0);
+
+    int shmid4 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
+    results1=(char*) shmat(shmid4,(void*)0,0);
+
+    int shmid5 = shmget(ftok("/bin",65),1024,0666|IPC_CREAT);
+    results3=(char*) shmat(shmid5,(void*)0,0);
+
+
  
 	// variable pid will store the
 	// value returned from fork() system call
@@ -216,7 +251,7 @@ int main()
     	pthread_join(C1_execution_thread , NULL);
     	pthread_join(C1_monitor_thread, NULL);
     	
-
+        sum = sti2(results1);
 		printf("Sum: %ld",sum);
 
         close(p1[0]);
@@ -260,9 +295,11 @@ int main()
     			pthread_join(C3_execution_thread , NULL);
     			pthread_join(C3_monitor_thread, NULL);
 
+                sum2 = sti2(results3);
+ 
 				//sending output via pipes
                 close(p3[0]);
-                write(p3[1],&sum2,sizeof(sum2));
+                write(p3[1],sum2,sizeof(sum2));
                 close(p3[1]);
 				
                 //execlp("./C3.out", "C3", NULL);
