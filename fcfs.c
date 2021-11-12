@@ -287,7 +287,8 @@ void* C1_execution_function(void* argument){
 
         //Critical section
         int x;
-        scanf("[C1]: Enter a number: %d\n",&x);
+        printf("[C1]: Enter a number: ");
+        scanf("%d",&x);
         arg += x;  
         
 
@@ -330,7 +331,9 @@ void* C1_monitor_function(){
             }
         }
         else break;
-
+       
+       int shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
+       C1_memory=(char*) shmat(shmid1,(void*)0,0);
         printf("[C1 MONITOR THREAD]: Shared memory: %s",C1_memory);
 
 
@@ -448,7 +451,7 @@ int main()
     }
 
         else {
-        wait(NULL);
+        //wait(NULL);
 		pid1 = fork();
 		if (pid1 == 0) {
             //C2
@@ -469,7 +472,7 @@ int main()
     		pthread_join(C2_monitor_thread, NULL);
 		}
 		else {
-            wait(NULL);
+            //wait(NULL);
 			pid2 = fork();
 			if (pid2 == 0) {
 
@@ -500,7 +503,7 @@ int main()
             }
             else{
 
-                wait(NULL);
+                //wait(NULL);
  
                 int c1_sum,c3_sum;
                 
