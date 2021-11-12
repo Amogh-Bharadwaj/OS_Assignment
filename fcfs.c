@@ -18,7 +18,8 @@ pthread_mutex_t mutex3;
 char* C1_memory;
 char* C2_memory;
 char* C3_memory;
-char* results1,results3;
+char* results1;
+char* results3;
 
 union void_cast {
     void* ptr;
@@ -121,7 +122,7 @@ void* C2_execution_function(void *arg)
 
 		pthread_mutex_lock(&mutex2);
         int num = atoi(str);
-        printf("%d\n" , num);
+        printf("[C2]:Number: %d\n" , num);
         pthread_mutex_unlock(&mutex2);
       } while(fgets(str,10,fp1)!=NULL);
 	
@@ -161,7 +162,7 @@ void* C1_execution_function(void* argument){
     for(int i=0;i<n;i++){ 
         pthread_mutex_lock(&mutex1);
         
-        printf("[C1]: Unlocked by monitor...\n");
+        //printf("[C1]: Unlocked by monitor...\n");
         
         //Critical section
         int x;
@@ -238,6 +239,11 @@ int main()
 	// If fork() returns zero then it
 	// means it is child process.
 	if (pid == 0) {
+
+        C2_memory="Lock C2";
+        C3_memory="Lock C3";
+        C1_memory="Wake C1";
+
 		pthread_t C1_monitor_thread;
 		pthread_t C1_execution_thread;
     
@@ -252,7 +258,7 @@ int main()
     	pthread_join(C1_monitor_thread, NULL);
     	
         sum = sti2(results1);
-		printf("Sum: %ld",sum);
+		printf("Sum: %ld\n",sum);
 
         close(p1[0]);
         write(p1[1],&sum,sizeof(sum));
@@ -262,10 +268,17 @@ int main()
 	}
 
 	else {
-        wait(NULL);
+        //wait(NULL);
 		pid1 = fork();
 		if (pid1 == 0) {
-            //C2
+            
+            if(C1_memory=="Die,C1"){
+
+            C2_memory="Wake C2";
+            C3_memory="Lock C3";
+            C1_memory="Lock C1";
+            
+
 			pthread_t C2_monitor_thread;
 			pthread_t C2_execution_thread;
     
@@ -276,13 +289,18 @@ int main()
 			//pthread_join waits for the threads passed as argument to finish(terminate).
     		pthread_join(C2_execution_thread , NULL);
     		pthread_join(C2_monitor_thread, NULL);
+            }
 		}
 		else {
-            wait(NULL);
+            //wait(NULL);
 			pid2 = fork();
 			if (pid2 == 0) {
+                if(C1_memory=="Die,C1" && C2_memory=="Die,C2"){
+                C2_memory="Lock C2";
+                C3_memory="Wake C3";
+                C1_memory="Lock C1";
+               
                 
-                //C3
 				pthread_t C3_monitor_thread;
 				pthread_t C3_execution_thread;
                 long sum2 = 0;
@@ -299,10 +317,10 @@ int main()
  
 				//sending output via pipes
                 close(p3[0]);
-                write(p3[1],sum2,sizeof(sum2));
+                write(p3[1],&sum2,sizeof(sum2));
                 close(p3[1]);
-				
-                //execlp("./C3.out", "C3", NULL);
+                }
+		
 			}
  
 			// If value returned from fork()
@@ -310,7 +328,7 @@ int main()
 			// this is parent process.
 			else {
 				
-				wait(NULL);
+				//wait(NULL);
  
                 int c1_sum,c3_sum;
  
