@@ -79,10 +79,10 @@ void* C3_execution_function(void *arg)
 
     do {
         printf("[C3]: Locked by monitor...\n");
-		pthread_mutex_lock(&mutex3);
+		//pthread_mutex_lock(&mutex3);
 
         sum += atoi(str);
-        pthread_mutex_unlock(&mutex3);
+        //pthread_mutex_unlock(&mutex3);
     }while(fgets(str,10,fp)!=NULL);
 
 
@@ -120,10 +120,10 @@ void* C2_execution_function(void *arg)
     
 	do{
 
-		pthread_mutex_lock(&mutex2);
+		//pthread_mutex_lock(&mutex2);
         int num = atoi(str);
         printf("[C2]:Number: %d\n" , num);
-        pthread_mutex_unlock(&mutex2);
+        //pthread_mutex_unlock(&mutex2);
       } while(fgets(str,10,fp1)!=NULL);
 	
 	C2_memory="Die,C2";
@@ -160,7 +160,7 @@ void* C1_execution_function(void* argument){
     scanf("%d",&n);
 
     for(int i=0;i<n;i++){ 
-        pthread_mutex_lock(&mutex1);
+        //pthread_mutex_lock(&mutex1);
         
         //printf("[C1]: Unlocked by monitor...\n");
         
@@ -169,7 +169,7 @@ void* C1_execution_function(void* argument){
         scanf("[C1]: Enter a number: %d\n",&x);
         arg += x;  
         //printf("[C1]: Executing.\n");
-        pthread_mutex_unlock(&mutex1);
+        //pthread_mutex_unlock(&mutex1);
            
     }
     printf("[C1]: SUM: %d\n",arg);
