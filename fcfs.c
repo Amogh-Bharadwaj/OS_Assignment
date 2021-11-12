@@ -265,18 +265,14 @@ void* C2_monitor_function(void *arg){
 void* C1_execution_function(void* argument){
 
     int arg = VOID_TO_INT(argument);
-    //printf("Enter number of values when executiossssn thread isn't sleeping:\n");
+    printf("[C1]: Enter number of values when executiossssn thread isn't sleeping:\n");
     
     int n=2;
-    //scanf("%d",&n);
-    printf("After input\n");
+    scanf("%d",&n);
     
-    printf("Checking outside\n");
-
     int shmid1;
     for(int i=0;i<n;i++){ 
-        printf("Checking inside\n");
-
+       
         shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
         C1_memory=(char*) shmat(shmid1,(void*)0,0);
         
