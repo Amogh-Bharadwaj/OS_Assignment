@@ -166,10 +166,12 @@ void* C1_execution_function(void* argument){
         
         //Critical section
         int x;
-        scanf("[C1]: Enter a number: %d\n",&x);
+        printf("[C1]: Enter a number: ");
+        scanf("%d",&x);
         arg += x;  
         //printf("[C1]: Executing.\n");
         //pthread_mutex_unlock(&mutex1);
+        
            
     }
     printf("[C1]: SUM: %d\n",arg);
