@@ -339,7 +339,7 @@ void* C1_monitor_function(){
        
        shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
        C1_memory=(char*) shmat(shmid1,(void*)0,0);
-        printf("[C1 MONITOR THREAD]: Shared memory: %s",C1_memory);
+        printf("[C1 MONITOR THREAD]: Shared memory: %s\n",C1_memory);
 
 
         printf("[C1 MONITOR THREAD]: Unlocking execution thread.\n");
