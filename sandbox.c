@@ -65,13 +65,13 @@ void* execution_function(void* argument){
            
     }
     printf("[EXECUTION THREAD] SUM: %d\n",arg);
+    int shmid = shmget(ftok("./",65),1024,0666|IPC_CREAT);
+    shared_memory=(char*) shmat(shmid,(void*)0,0);
     shared_memory="Die,monitor";
-    
- 
-    //[TO BE FIXED] Putting flag to -1 will make monitor function exit
-    //the while loop, but it doesn't exit.
 }
  
+    
+
 void* monitor_function(){
     while(shared_memory!="Die,monitor"){
         printf("[MONITOR THREAD]: Shared memory: %s\n",shared_memory);
@@ -79,8 +79,7 @@ void* monitor_function(){
         sleep(3);
         printf("[MONITOR THREAD]: Locking execution thread.\n");
         //pthread_mutex_lock(&mutex1);
-        int shmid = shmget(ftok("./",65),1024,0666|IPC_CREAT);
-        shared_memory=(char*) shmat(shmid,(void*)0,0);
+        
 
         
         if(shared_memory!="Die,monitor")shared_memory="Execution go to sleep";
@@ -101,6 +100,8 @@ void* monitor_function(){
 int main(){
  
     key_t key = ftok("./",65);
+    int shmid = shmget(ftok("./",65),1024,0666|IPC_CREAT);
+    shared_memory=(char*) shmat(shmid,(void*)0,0);
   
     // shmget returns an identifier in shmid
     
