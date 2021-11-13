@@ -15,6 +15,10 @@
 #include <time.h>
 #include <sys/mman.h>
 
+
+pthread_cond_t T1=PTHREAD_COND_INITIALIZER,T2=PTHREAD_COND_INITIALIZER,T3=PTHREAD_COND_INITIALIZER;
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+int play1=0,play2=0,play3=0;
 void* share_memory(size_t size) {
   int protection = PROT_READ | PROT_WRITE;
   int visibility = MAP_SHARED | MAP_ANONYMOUS;
@@ -44,6 +48,7 @@ int sti(char s[]){
 }
 
 void* C3_execution_function(void *arg){  
+    
     // Opening n3 text file.
     FILE* fp;
     fp = fopen("n3.txt" , "r");
@@ -51,28 +56,39 @@ void* C3_execution_function(void *arg){
 	int sum=0;
 
     do {
-        // C3 is asleep until monitor tells to wake up.
-		while(strcmp(C3_memory,"Stop")==0)printf("[C3]: Locked by monitor...\n");
+                // C3 is asleep until monitor tells to wake up.
+		        pthread_mutex_lock(&mutex);
+                while(!play3){printf("[C3]: Locked by monitor...\n");pthread_cond_wait(&T3,&mutex);}
         
         // Critical section
         sum += atoi(str);
+        pthread_mutex_unlock(&mutex);
     }while(fgets(str,10,fp)!=NULL);
 
-    strcpy(C3_memory,"Die");
+    strcpy(MC3_memory,"Die");
 
     return (void *)sum;
 }
 
 void* C3_monitor_function(void *arg){
-     sleep(1);
-    while(strcmp(C3_memory,"Die")!=0){ 
-        // If scheduler says to stop.
-        if((strcmp(MC3_memory,"Stop")==0) && (strcmp(C3_memory,"Die")!=0))strcpy(C3_memory,"Stop");
-        else break;
      
+    while(strcmp(MC3_memory,"Die")!=0){ 
+        // If scheduler says to stop.
+        if(strcmp(MC3_memory,"Stop")==0){
+            //printf("Locking...\n");
+            pthread_mutex_lock(&mutex);
+            play3 = 0;
+            pthread_mutex_unlock(&mutex);
+        }
+      
         // If scheduler says to start.
-        if(( strcmp(MC3_memory,"Start")) && (strcmp(C3_memory,"Die")!=0))strcpy(C3_memory,"Start");
-        else break;
+        if(strcmp(MC3_memory,"Start")==0){
+            pthread_mutex_lock(&mutex);
+            play3 = 1;
+            pthread_cond_signal(&T3);
+            pthread_mutex_unlock(&mutex);
+        }
+      
     }
 
 }
@@ -84,28 +100,47 @@ void* C2_execution_function(void *arg)
     fp1 = fopen("n2.txt","r");
     char str[8];
 	do{
-		while(strcmp(C2_memory,"Stop")==0)printf("[C2]: Locked by monitor...\n");
+		        
+                pthread_mutex_lock(&mutex);
+                while(!play2){printf("[C2]: Locked by monitor...\n");pthread_cond_wait(&T2,&mutex);}
             
         //Critical section
         int num = atoi(str);
         printf("[C2]: %d\n" , num);
+        pthread_mutex_unlock(&mutex);
       } while(fgets(str,10,fp1)!=NULL);
 
     // Intimating to monitor that C2 is over.
-	strcpy(C2_memory,"Die");
+	strcpy(MC2_memory,"Die");
 }
 
 void* C2_monitor_function(void *arg){
 
     sleep(1);
-    while(strcmp(C2_memory,"Die")!=0){ 
+    while(strcmp(MC2_memory,"Die")!=0){ 
+
+        if(MC2_memory=="Die"){
+            printf("[C1 MONITOR]: Im out\n");
+            pthread_mutex_unlock(&mutex);
+            break;
+        }
         // If scheduler says to stop.
-        if((strcmp(MC2_memory,"Stop")==0) && (strcmp(C2_memory,"Die")!=0))strcpy(C2_memory,"Stop");
-        else break;
+        if((strcmp(MC2_memory,"Stop")==0)){
+            //printf("Locking C2...\n");
+            pthread_mutex_lock(&mutex);
+            play2 = 0;
+            pthread_mutex_unlock(&mutex);
+        }
+        
      
         // If scheduler says to start.
-        if(( strcmp(MC2_memory,"Start")) && (strcmp(C2_memory,"Die")!=0))strcpy(C2_memory,"Start");
-        else break;
+        if(strcmp(MC2_memory,"Start")==0){
+            pthread_mutex_lock(&mutex);
+            play2 = 1;
+            pthread_cond_signal(&T2);
+            pthread_mutex_unlock(&mutex);
+        }
+      
     }
 }
 
@@ -119,33 +154,55 @@ void* C1_execution_function(void* argument){
     scanf("%d",&n); 
     for(int i=0;i<n;i++){ 
         // Unless monitor tells me to start, I will be asleep.
-        while(strcmp(C1_memory,"Stop")==0)printf("[C1]: Locked by monitor...\n");
+        
+        pthread_mutex_lock(&mutex);
+        while(!play1){printf("[C1]: Locked by monitor...\n");pthread_cond_wait(&T1,&mutex);}
         
         //Critical section
         int x;
         printf("[C1]: Enter a number: ");
         scanf("%d",&x);
         arg += x;  
+        pthread_mutex_unlock(&mutex);
     }
     printf("[C1]: SUM: %d\n",arg);
-    
+   
     // Intimating to monitor that execution is over.
-    strcpy(C1_memory,"Die");
+    strcpy(MC1_memory,"Die");
     return (void *)arg;
 }
 
 void* C1_monitor_function(){
     // If C1 is over, monitor thread should terminate.
-    sleep(1);
+   
     
-    while(strcmp(C1_memory,"Die")!=0){    
+    while(strcmp(MC1_memory,"Die")!=0){    
+
+        //printf("MC1 memory: %s\n",MC1_memory);
+        if(MC1_memory=="Die"){
+            printf("[C1 MONITOR]: Im out\n");
+            pthread_mutex_unlock(&mutex);
+            break;
+        }
+
+       
         // If scheduler says to stop.
-        if((strcmp(MC1_memory,"Stop")==0) && (strcmp(C1_memory,"Die")!=0))strcpy(C1_memory,"Stop");
-        else break;
-     
+        if(strcmp(MC1_memory,"Stop")==0){
+            printf("Locking C1...\n");
+            pthread_mutex_lock(&mutex);
+            play1 = 0;
+            pthread_mutex_unlock(&mutex);
+        }
+       
         // If scheduler says to start.
-        if(( strcmp(MC1_memory,"Start")) && (strcmp(C1_memory,"Die")!=0))strcpy(C1_memory,"Start");
-        else break;
+        if( strcmp(MC1_memory,"Start")==0){
+            //printf("Unlocking..\n");
+            pthread_mutex_lock(&mutex);
+            play1 = 1;
+            pthread_cond_signal(&T1);
+            pthread_mutex_unlock(&mutex);
+        }
+        
     }
 }
 
@@ -158,23 +215,16 @@ int main()
 
     // List of shared memories. 
     // C1,C2,C3 are for monitor-to-execution thread communication.
-   C1_memory = share_memory(128);
-   strcpy(C1_memory,"Blank");
-
-   C2_memory = share_memory(128);
-   strcpy(C2_memory,"Blank");
-   
-   C3_memory = share_memory(128);
-   strcpy(C3_memory,"Blank");
 
    // MC1,MC2,MC3 are main-to-process communication
    MC1_memory = share_memory(128);
-   strcpy(MC1_memory,"Start");
+   strcpy(MC1_memory,"Stop");
 
    MC2_memory = share_memory(128);
-   strcpy(MC2_memory,"Start");
+   strcpy(MC2_memory,"Stop");
 
    MC3_memory = share_memory(128);
+   strcpy(MC3_memory,"Stop");
     
     
     //Creating pipes.
@@ -199,8 +249,7 @@ int main()
 	if (pid == 0) {
 
         // C1
-
-       strcpy(MC1_memory,"Start");// Setting to start so C1 will start immediately.
+        //strcpy(MC1_memory,"Start");// Setting to start so C1 will start immediately.
 
 		pthread_t C1_monitor_thread;
 		pthread_t C1_execution_thread;
@@ -208,12 +257,14 @@ int main()
         void* status; // To store return value from execution thread.
 
         //Concurrent execution of both threads
+        pthread_create(&C1_execution_thread , NULL, C1_execution_function,NULL);
+        sleep(2);
 		pthread_create(&C1_monitor_thread , NULL, C1_monitor_function,NULL);
-    	pthread_create(&C1_execution_thread , NULL, C1_execution_function,NULL);
+    	
 
 		//pthread_join waits for the threads passed as argument to finish(terminate).
     	pthread_join(C1_execution_thread , &status); //The value returned by the execution function will be stored in status.
-    	//pthread_join(C1_monitor_thread, NULL); 
+    	pthread_join(C1_monitor_thread, NULL); 
 
         int sum = (int)status; // Type casting status to int and storing in sum.
 
@@ -234,12 +285,16 @@ int main()
             //C2
 
             
-            while(strcmp(C1_memory,"Die")!=0)sleep(0.1);
+            //while(strcmp(MC1_memory,"Die")!=0);
+            //printf("C2\n");
+ 
 
-            strcpy(MC2_memory,"Start");
+            //strcpy(MC2_memory,"Start");
 
-            pthread_t C2_monitor_thread;
+           
 			pthread_t C2_execution_thread;
+            sleep(1);
+             pthread_t C2_monitor_thread;
 
 			//Concurrent execution of both threads
 			pthread_create(&C2_monitor_thread , NULL, C2_monitor_function,NULL);
@@ -259,10 +314,11 @@ int main()
 			if (pid2 == 0) {
 
                
-                while(strcmp(C2_memory,"Die")!=0)sleep(0.1);
+                //while(strcmp(MC2_memory,"Die")!=0)sleep(0.1);
+                //printf("C3\n");
  
                 //C3
-                strcpy(MC3_memory,"Start");
+                //strcpy(MC3_memory,"Start");
 
 				pthread_t C3_monitor_thread;
 				pthread_t C3_execution_thread;
@@ -271,8 +327,10 @@ int main()
                 void* status;
 
                 //Concurrent execution of both threads
-				pthread_create(&C3_monitor_thread , NULL, C3_monitor_function,NULL);
+				
     			pthread_create(&C3_execution_thread , NULL, C3_execution_function,NULL);
+                sleep(1);
+                pthread_create(&C3_monitor_thread , NULL, C3_monitor_function,NULL);
 
                 pthread_join(C3_execution_thread , &status);
                 int sum2 = (int)status;
@@ -288,12 +346,21 @@ int main()
                 //wait(NULL);
               
                 int c1_sum,c3_sum;
-                
+
+                strcpy(MC1_memory,"Start");
+                while(strcmp(MC1_memory,"Die"));
+
                 // Getting message via pipe from C1.
                 read(p1[0],&c1_sum,sizeof(c1_sum));
                 close(p1[0]);
                 printf("C1 output: %d\n",c1_sum);
 
+                strcpy(MC2_memory,"Start");
+                while(strcmp(MC2_memory,"Die"));
+
+                strcpy(MC3_memory,"Start");
+                while(strcmp(MC3_memory,"Die"));
+                
                 // Getting message via pipe from C3.
                 read(p3[0],&c3_sum,sizeof(c3_sum));
                 close(p3[0]); 
