@@ -2,7 +2,6 @@
 // FCFS Code
 // TO BE FIXED: Critical section being skipped [Not performing input of numbers] and C1 not terminating.
 
-
 #define _GNU_SOURCE
 #include<stdio.h>
 #include<stdlib.h>
@@ -16,17 +15,9 @@
 
 #include <sys/mman.h>
 
-void* create_shared_memory(size_t size) {
-  // Our memory buffer will be readable and writable:
+void* share_memory(size_t size) {
   int protection = PROT_READ | PROT_WRITE;
-
-  // The buffer will be shared (meaning other processes can access it), but
-  // anonymous (meaning third-party processes cannot obtain an address for it),
-  // so only this process and its children will be able to use it:
   int visibility = MAP_SHARED | MAP_ANONYMOUS;
-
-  // The remaining parameters to `mmap()` are not important for this use case,
-  // but the manpage for `mmap` explains their purpose.
   return mmap(NULL, size, protection, visibility, -1, 0);
 }
 
@@ -199,18 +190,18 @@ int main()
 
     // List of shared memories. 
     // C1,C2,C3 are for monitor-to-execution thread communication.
-   C1_memory = create_shared_memory(128);
-   C2_memory = create_shared_memory(128);
-   C3_memory = create_shared_memory(128);
+   C1_memory = share_memory(128);
+   C2_memory = share_memory(128);
+   C3_memory = share_memory(128);
 
    // MC1,MC2,MC3 are main-to-process communication
-   MC1_memory = create_shared_memory(128);
+   MC1_memory = share_memory(128);
    strcpy(MC1_memory,"Start");
 
-   MC2_memory = create_shared_memory(128);
+   MC2_memory = share_memory(128);
    strcpy(MC2_memory,"Start");
 
-   MC3_memory = create_shared_memory(128);
+   MC3_memory = share_memory(128);
     
     
     //Creating pipes.
