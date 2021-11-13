@@ -28,41 +28,8 @@ char* MC1_memory; // This is for Main to the three processes.
 char* MC2_memory;
 char* MC3_memory;
 
-
-// Union and two functions to convert void* to int. 
-union void_cast {
-    void* ptr;
-    int value;
-};
-
-int VOID_TO_INT(void* ptr) {
-    union void_cast u;
-    u.ptr = ptr;
-    return u.value;
-}
-
-void* INT_TO_VOID(int value) {
-    union void_cast u;
-    u.value = value;
-    return u.ptr;
-}
-
 //Function to convert string to integer, or sti for short. 
 int sti(char s[]){
-    int num = 0;
-    int l = strlen(s);
-   
-    for(int i=0;i<l-1;i++){
-        num+=(int)(s[i]-'0');
-        num*=10;
-    }
-    
-    num=num/10;
-    return num;
-}
-
-// Same as above function but takes char pointer as argument.
-int sti2(char* s){
     int num = 0;
     int l = strlen(s);
    
