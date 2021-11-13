@@ -218,20 +218,23 @@ int main()
         int sum = (int)status; // Type casting status to int and storing in sum.
 
         //printf("Sum inside C1 child: %ld\n",sum);
-        printf("------------------------------------------------\n");
+        //printf("------------------------------------------------\n");
 
         close(p1[0]);
         write(p1[1],&sum,sizeof(sum)); // Writing sum to pipe.
         close(p1[1]);
-        sleep(2);
+       
 
     }
 
         else {
-        wait(NULL);
+        //wait(NULL);
 		pid1 = fork();
 		if (pid1 == 0) {
             //C2
+
+            
+            while(strcmp(C1_memory,"Die")!=0)sleep(0.1);
 
             strcpy(MC2_memory,"Start");
 
@@ -244,14 +247,20 @@ int main()
 
             //pthread_join waits for the threads passed as argument to finish(terminate).
     		pthread_join(C2_execution_thread , NULL);
-    		pthread_join(C2_monitor_thread, NULL);
-            printf("------------------------------------------------\n");
-            sleep(2);
+    		//pthread_join(C2_monitor_thread, NULL);
+            
+           
 		}
 		else {
-            wait(NULL);
+            //wait(NULL);
+            
+            
 			pid2 = fork();
 			if (pid2 == 0) {
+
+               
+                while(strcmp(C2_memory,"Die")!=0)sleep(0.1);
+ 
                 //C3
                 strcpy(MC3_memory,"Start");
 
@@ -276,8 +285,8 @@ int main()
             }
             else{
 
-                wait(NULL);
- 
+                //wait(NULL);
+              
                 int c1_sum,c3_sum;
                 
                 // Getting message via pipe from C1.
