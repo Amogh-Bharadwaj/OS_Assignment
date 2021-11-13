@@ -12,7 +12,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <pthread.h>
-
+#include <
 #include <sys/mman.h>
 
 void* share_memory(size_t size) {
@@ -279,7 +279,7 @@ int main()
                 close(p1[0]);
                 printf("C1 output: %d\n",c1_sum);
 
-                //getting message via pipe from C3.
+                // Getting message via pipe from C3.
                 read(p3[0],&c3_sum,sizeof(c3_sum));
                 close(p3[0]); 
                 printf("C3 output: %d\n",c3_sum);
@@ -287,5 +287,3 @@ int main()
         }
         }
     }
-
-    
