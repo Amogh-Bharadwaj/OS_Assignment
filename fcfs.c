@@ -15,6 +15,11 @@
 #include <time.h>
 #include <sys/mman.h>
 
+/* 
+ pthread_wait_cond will automatically release a lock before it and wait on a conditional variable
+ until signalled. 
+ We use this to communicate between threads.
+*/
 
 pthread_cond_t T1=PTHREAD_COND_INITIALIZER,T2=PTHREAD_COND_INITIALIZER,T3=PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -76,6 +81,8 @@ void* C3_monitor_function(void *arg){
         // If scheduler says to stop.
         if(strcmp(MC3_memory,"Stop")==0){
             //printf("Locking...\n");
+
+            // To pause
             pthread_mutex_lock(&mutex);
             play3 = 0;
             pthread_mutex_unlock(&mutex);
@@ -83,6 +90,8 @@ void* C3_monitor_function(void *arg){
       
         // If scheduler says to start.
         if(strcmp(MC3_memory,"Start")==0){
+
+            // To play
             pthread_mutex_lock(&mutex);
             play3 = 1;
             pthread_cond_signal(&T3);
