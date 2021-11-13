@@ -14,6 +14,22 @@
 #include <sys/shm.h>
 #include <pthread.h>
 
+#include <sys/mman.h>
+
+void* create_shared_memory(size_t size) {
+  // Our memory buffer will be readable and writable:
+  int protection = PROT_READ | PROT_WRITE;
+
+  // The buffer will be shared (meaning other processes can access it), but
+  // anonymous (meaning third-party processes cannot obtain an address for it),
+  // so only this process and its children will be able to use it:
+  int visibility = MAP_SHARED | MAP_ANONYMOUS;
+
+  // The remaining parameters to `mmap()` are not important for this use case,
+  // but the manpage for `mmap` explains their purpose.
+  return mmap(NULL, size, protection, visibility, -1, 0);
+}
+
 char* C1_memory; // Interthread communication (monitor thread of C1 to execution thread of C1).
 char* C2_memory;
 char* C3_memory;
@@ -68,102 +84,37 @@ int sti2(char* s){
     return num;
 }
 
-void* C3_execution_function(void *arg)
-{
-    
+void* C3_execution_function(void *arg){  
     // Opening n3 text file.
     FILE* fp;
     fp = fopen("n3.txt" , "r");
-
     char str[8];
 	int sum=0;
-    int shmid3;
 
     do {
-
-        shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
-        C3_memory=(char*) shmat(shmid3,(void*)0,0);
-        
         // C3 is asleep until monitor tells to wake up.
-		while(C3_memory!="Start"){
-            printf("[C3]: Locked by monitor...\n");
-            //printf("Shared memory inside C3: %s\n",shared_memory);
-            sleep(1);
-        }
-
+		while(strcmp(C3_memory,"Stop")==0)printf("[C3]: Locked by monitor...\n");
+        
+        // Critical section
         sum += atoi(str);
     }while(fgets(str,10,fp)!=NULL);
 
-    
-    shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
-    C3_memory=(char*) shmat(shmid3,(void*)0,0);
-    
-    // Intimating to C3-monitor thread that C3 is over.
-    C3_memory="Die";
+    strcpy(C3_memory,"Die");
 
     return (void *)sum;
-
 }
 
 void* C3_monitor_function(void *arg){
-    int shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
-    C3_memory=(char*) shmat(shmid3,(void*)0,0);
-
-    // Monitor should die when C3 is over.
-	while(C3_memory!="Die"){
-        
-        printf("[C3 MONITOR THREAD]: Locking execution thread.\n");
-
-       shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
-       C3_memory=(char*) shmat(shmid3,(void*)0,0);
-       
-       // C3 Monitor will die when C3 dies.
-       if(C3_memory!="Die"){
-          
-
-            int shmid6 = shmget(ftok("/var",65),1024,0666|IPC_CREAT);
-            MC3_memory=(char*) shmat(shmid6,(void*)0,0);
-
-            // When scheduler tells to stop.
-            if(MC3_memory=="C3 Stop"){
-                
-               shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
-               C3_memory=(char*) shmat(shmid3,(void*)0,0);
-                
-                // Monitor tells execution thread to stop.
-                C3_memory="Stop";
-            }
-        }
+     sleep(1);
+    while(strcmp(C3_memory,"Die")!=0){ 
+        // If scheduler says to stop.
+        if((strcmp(MC3_memory,"Stop")==0) && (strcmp(C3_memory,"Die")!=0))strcpy(C3_memory,"Stop");
         else break;
-
-
-        printf("[C3 MONITOR THREAD]: Unlocking execution thread.\n");
-
-       shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
-       C3_memory=(char*) shmat(shmid3,(void*)0,0);
-       
-       // C3 Monitor dies when C3 dies.
-       if(C3_memory!="Die"){
-          
-
-            int shmid6 = shmget(ftok("/var",65),1024,0666|IPC_CREAT);
-            MC3_memory=(char*) shmat(shmid6,(void*)0,0);
- 
-            // If scheduler tells to start
-            if(MC3_memory=="C3 Start"){
-                
-               shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
-               C3_memory=(char*) shmat(shmid3,(void*)0,0);
-                
-                // Then C3 will start.
-                C3_memory="Start";
-            }
-        }
+     
+        // If scheduler says to start.
+        if(( strcmp(MC3_memory,"Start")) && (strcmp(C3_memory,"Die")!=0))strcpy(C3_memory,"Start");
         else break;
-
-	
     }
-    printf("[C3 MONITOR THREAD]: I'm done.");
 
 }
 
@@ -173,204 +124,70 @@ void* C2_execution_function(void *arg)
     FILE* fp1;
     fp1 = fopen("n2.txt","r");
     char str[8];
-
-    int shmid2;
 	do{
-        shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-        C2_memory=(char*) shmat(shmid2,(void*)0,0);
-
-		while(C2_memory!="Start"){
-            printf("[C2]: Locked by monitor...\n");
-            //printf("Shared memory inside C2: %s\n",shared_memory);
-            sleep(1);
-        }
-
+		while(strcmp(C2_memory,"Stop")==0)printf("[C2]: Locked by monitor...\n");
+            
+        //Critical section
         int num = atoi(str);
-        printf("%d\n" , num);
+        printf("[C2]: %d\n" , num);
       } while(fgets(str,10,fp1)!=NULL);
 
-
-    shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-    C2_memory=(char*) shmat(shmid2,(void*)0,0);
-
     // Intimating to monitor that C2 is over.
-	C2_memory="Die";
-
-  
+	strcpy(C2_memory,"Die");
 }
 
 void* C2_monitor_function(void *arg){
 
-    int shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-    C2_memory=(char*) shmat(shmid2,(void*)0,0);
-
-	while(C2_memory!="Die"){
-    
-        printf("[C2 MONITOR THREAD]: Locking execution thread.\n");
-
-        shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-        C2_memory=(char*) shmat(shmid2,(void*)0,0);
-       
-       // Monitor dies when C2 dies.
-       if(C2_memory!="Die"){
-            shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-            C2_memory=(char*) shmat(shmid2,(void*)0,0);
-
-
-            int shmid5 = shmget(ftok("/dev",65),1024,0666|IPC_CREAT);
-            MC2_memory=(char*) shmat(shmid5,(void*)0,0);
-            
-            // If scheduler tells to stop
-            if(MC2_memory=="C2 Stop"){
-                
-                shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-                C2_memory=(char*) shmat(shmid2,(void*)0,0);
-                
-                // Monitor tells execution to stop.
-                C2_memory="Stop";
-            }
-        }
+    sleep(1);
+    while(strcmp(C2_memory,"Die")!=0){ 
+        // If scheduler says to stop.
+        if((strcmp(MC2_memory,"Stop")==0) && (strcmp(C2_memory,"Die")!=0))strcpy(C2_memory,"Stop");
         else break;
-
-
-        printf("[C2 MONITOR THREAD]: Unlocking execution thread.\n");
-
-        shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-        C2_memory=(char*) shmat(shmid2,(void*)0,0);
-
-        
-        // Monitor dies when C2 dies.
-        if(C2_memory!="Die"){
-            int shmid5 = shmget(ftok("/dev",65),1024,0666|IPC_CREAT);
-            MC2_memory=(char*) shmat(shmid5,(void*)0,0);
-            
-            // If scheduler says to start.
-            if(MC2_memory=="C2 Start"){
-
-                 shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-                 C2_memory=(char*) shmat(shmid2,(void*)0,0);
-                // Monitor will tell execution thread to start.
-                C2_memory="Start";
-            }
-            }
+     
+        // If scheduler says to start.
+        if(( strcmp(MC2_memory,"Start")) && (strcmp(C2_memory,"Die")!=0))strcpy(C2_memory,"Start");
         else break;
-
-		printf("[C2 MONITOR THREAD]: C2 memory: %s",C2_memory);
     }
-    printf("[C2 MONITOR THREAD]: I'm done.");
-
 }
 
 
 void* C1_execution_function(void* argument){
 
-    int arg = VOID_TO_INT(argument);
-    printf("[C1]: Enter number of values when executiossssn thread isn't sleeping:\n");
+    int arg = 0;
+    printf("[C1]: Enter number of values when execution thread isn't sleeping:\n");
     
-    int n=2;
-    scanf("%d",&n);
-    
-    int shmid1;
+    int n;
+    scanf("%d",&n); 
     for(int i=0;i<n;i++){ 
-       
-        shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
-        C1_memory=(char*) shmat(shmid1,(void*)0,0);
-        
         // Unless monitor tells me to start, I will be asleep.
-        while(C1_memory!="Start"){
-            printf("[C1]: Locked by monitor...\n");
-            //printf("[C1]: Shared memory inside the while loop: %s\n",shared_memory);
-
-            sleep(1);
-        }
-
-        printf("C1 memory after the while loop: %s\n",C1_memory);
-
-        printf("[C1]: Unlocked by monitor...\n");
-
+        while(strcmp(C1_memory,"Stop")==0)printf("[C1]: Locked by monitor...\n");
+        
         //Critical section
         int x;
         printf("[C1]: Enter a number: ");
         scanf("%d",&x);
         arg += x;  
-        
-
     }
     printf("[C1]: SUM: %d\n",arg);
     
-    shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
-    C1_memory=(char*) shmat(shmid1,(void*)0,0);
-
     // Intimating to monitor that execution is over.
-    C1_memory="Die";
+    strcpy(C1_memory,"Die");
     return (void *)arg;
 }
 
 void* C1_monitor_function(){
-
-    int shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
-    C1_memory=(char*) shmat(shmid1,(void*)0,0);
-
-    while(C1_memory!="Die"){
-        //Just for smooth running, we put to sleep for a few seconds.
-        sleep(1);
-        printf("[C1 MONITOR THREAD]: Locking execution thread.\n");
-
-        shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
-        C1_memory=(char*) shmat(shmid1,(void*)0,0);
-        
-        // If C1 is over, monitor thread should terminate.
-        if(C1_memory!="Die"){
-        
-            int shmid4 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-            MC1_memory=(char*) shmat(shmid4,(void*)0,0);
-
-            if(MC1_memory=="C1 Stop"){
-
-                shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
-                C1_memory=(char*) shmat(shmid1,(void*)0,0);
-
-                C1_memory="Stop";
-            }
-        }
+    // If C1 is over, monitor thread should terminate.
+    sleep(1);
+    
+    while(strcmp(C1_memory,"Die")!=0){    
+        // If scheduler says to stop.
+        if((strcmp(MC1_memory,"Stop")==0) && (strcmp(C1_memory,"Die")!=0))strcpy(C1_memory,"Stop");
         else break;
-       
-       shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
-       C1_memory=(char*) shmat(shmid1,(void*)0,0);
-        printf("[C1 MONITOR THREAD]: Shared memory: %s\n",C1_memory);
-
-
-        printf("[C1 MONITOR THREAD]: Unlocking execution thread.\n");
-
-       
-
-
-        shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
-        C1_memory=(char*) shmat(shmid1,(void*)0,0);
-        
-        // If C1 is over, then we terminate this monitor thread.
-        if(C1_memory!="Die"){
-
-            int shmid4 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-            MC1_memory=(char*) shmat(shmid4,(void*)0,0);
-
-
-           
-            // If scheduler says to start.
-            if(MC1_memory=="C1 Start"){
-                shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
-                C1_memory=(char*) shmat(shmid1,(void*)0,0);
-                
-                // Monitor tells execution thread to start.
-                C1_memory="Start";
-            }
-        }
+     
+        // If scheduler says to start.
+        if(( strcmp(MC1_memory,"Start")) && (strcmp(C1_memory,"Die")!=0))strcpy(C1_memory,"Start");
         else break;
-
-        
-
     }
-    printf("[C1 MONITOR THREAD] I'm done.");
 }
 
 int main()
@@ -381,26 +198,19 @@ int main()
     int p1[2],p3[2];
 
     // List of shared memories. 
-    // MC1,MC2,MC3 are main-to-process communication
     // C1,C2,C3 are for monitor-to-execution thread communication.
-    int shmid1 = shmget(ftok("./",65),1024,0666|IPC_CREAT);
-    C1_memory=(char*) shmat(shmid1,(void*)0,0);
+   C1_memory = create_shared_memory(128);
+   C2_memory = create_shared_memory(128);
+   C3_memory = create_shared_memory(128);
 
-    int shmid4 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-    MC1_memory=(char*) shmat(shmid4,(void*)0,0);
+   // MC1,MC2,MC3 are main-to-process communication
+   MC1_memory = create_shared_memory(128);
+   strcpy(MC1_memory,"Start");
 
-    int shmid2 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-    C2_memory=(char*) shmat(shmid2,(void*)0,0);
+   MC2_memory = create_shared_memory(128);
+   strcpy(MC2_memory,"Start");
 
-    int shmid5 = shmget(ftok("/dev",65),1024,0666|IPC_CREAT);
-    MC2_memory=(char*) shmat(shmid5,(void*)0,0);
-
-    int shmid3 = shmget(ftok("/opt",65),1024,0666|IPC_CREAT);
-    C3_memory=(char*) shmat(shmid3,(void*)0,0);
-
-    int shmid6 = shmget(ftok("/var",65),1024,0666|IPC_CREAT);
-    MC3_memory=(char*) shmat(shmid6,(void*)0,0);
-
+   MC3_memory = create_shared_memory(128);
     
     
     //Creating pipes.
@@ -426,9 +236,7 @@ int main()
 
         // C1
 
-        int shmid4 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-        MC1_memory=(char*) shmat(shmid4,(void*)0,0);
-        MC1_memory="C1 Start"; // Setting to start so C1 will start immediately.
+       strcpy(MC1_memory,"Start");// Setting to start so C1 will start immediately.
 
 		pthread_t C1_monitor_thread;
 		pthread_t C1_execution_thread;
@@ -441,15 +249,17 @@ int main()
 
 		//pthread_join waits for the threads passed as argument to finish(terminate).
     	pthread_join(C1_execution_thread , &status); //The value returned by the execution function will be stored in status.
-    	pthread_join(C1_monitor_thread, NULL); 
+    	//pthread_join(C1_monitor_thread, NULL); 
 
         int sum = (int)status; // Type casting status to int and storing in sum.
 
-        printf("Sum inside C1 child: %ld\n",sum);
+        //printf("Sum inside C1 child: %ld\n",sum);
+        printf("------------------------------------------------\n");
 
         close(p1[0]);
         write(p1[1],&sum,sizeof(sum)); // Writing sum to pipe.
         close(p1[1]);
+        sleep(2);
 
     }
 
@@ -459,9 +269,7 @@ int main()
 		if (pid1 == 0) {
             //C2
 
-            int shmid5 = shmget(ftok("/dev",65),1024,0666|IPC_CREAT);
-            MC2_memory=(char*) shmat(shmid5,(void*)0,0);
-            MC2_memory="C2 Start";
+            strcpy(MC2_memory,"Start");
 
             pthread_t C2_monitor_thread;
 			pthread_t C2_execution_thread;
@@ -473,17 +281,15 @@ int main()
             //pthread_join waits for the threads passed as argument to finish(terminate).
     		pthread_join(C2_execution_thread , NULL);
     		pthread_join(C2_monitor_thread, NULL);
+            printf("------------------------------------------------\n");
+            sleep(2);
 		}
 		else {
             wait(NULL);
 			pid2 = fork();
 			if (pid2 == 0) {
-
                 //C3
-
-                int shmid6 = shmget(ftok("/var",65),1024,0666|IPC_CREAT);
-                MC3_memory=(char*) shmat(shmid6,(void*)0,0);
-                MC3_memory="C3 Start";
+                strcpy(MC3_memory,"Start");
 
 				pthread_t C3_monitor_thread;
 				pthread_t C3_execution_thread;
@@ -500,9 +306,9 @@ int main()
     		    pthread_join(C3_monitor_thread, NULL);
 
                 close(p3[0]);
-               
                 write(p3[1],&sum2,sizeof(sum2));
                 close(p3[1]);
+                sleep(2);
             }
             else{
 
@@ -517,9 +323,8 @@ int main()
 
                 //getting message via pipe from C3.
                 read(p3[0],&c3_sum,sizeof(c3_sum));
-                close(p3[0]);
-
-                
+                close(p3[0]); 
+                printf("C3 output: %d\n",c3_sum);
             }
         }
         }
