@@ -1,5 +1,7 @@
-// CPP code to create three child
-// process of a parent
+
+// FCFS Code
+// TO BE FIXED: Critical section being skipped [Not performing input of numbers] and C1 not terminating.
+
 #define _GNU_SOURCE
 #include<stdio.h>
 #include<stdlib.h>
@@ -10,32 +12,22 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <pthread.h>
+#include <time.h>
+#include <sys/mman.h>
 
-pthread_mutex_t mutex1;
-pthread_mutex_t mutex2;
-pthread_mutex_t mutex3;
+void* share_memory(size_t size) {
+  int protection = PROT_READ | PROT_WRITE;
+  int visibility = MAP_SHARED | MAP_ANONYMOUS;
+  return mmap(NULL, size, protection, visibility, -1, 0);
+}
 
-char* C1_memory;
+char* C1_memory; // Interthread communication (monitor thread of C1 to execution thread of C1).
 char* C2_memory;
 char* C3_memory;
-char* results1,results3;
 
-union void_cast {
-    void* ptr;
-    int value;
-};
-
-int VOID_TO_INT(void* ptr) {
-    union void_cast u;
-    u.ptr = ptr;
-    return u.value;
-}
-
-void* INT_TO_VOID(int value) {
-    union void_cast u;
-    u.value = value;
-    return u.ptr;
-}
+char* MC1_memory; // This is for Main to the three processes.
+char* MC2_memory;
+char* MC3_memory;
 
 //Function to convert string to integer, or sti for short. 
 int sti(char s[]){
@@ -48,159 +40,149 @@ int sti(char s[]){
     }
     
     num=num/10;
-
     return num;
 }
 
-int sti2(char* s){
-    int num = 0;
-    int l = strlen(s);
-   
-    for(int i=0;i<l-1;i++){
-        num+=(int)(s[i]-'0');
-        num*=10;
-    }
-    
-    num=num/10;
-
-    return num;
-}
-
-void* C3_execution_function(void *arg)
-{
- 
+void* C3_execution_function(void *arg){  
+    // Opening n3 text file.
     FILE* fp;
     fp = fopen("n3.txt" , "r");
     char str[8];
 	int sum=0;
- 
-    
 
     do {
-        printf("[C3]: Locked by monitor...\n");
-		pthread_mutex_lock(&mutex3);
-
+        // C3 is asleep until monitor tells to wake up.
+		while(strcmp(C3_memory,"Stop")==0)printf("[C3]: Locked by monitor...\n");
+        
+        // Critical section
         sum += atoi(str);
-        pthread_mutex_unlock(&mutex3);
     }while(fgets(str,10,fp)!=NULL);
 
+    strcpy(C3_memory,"Die");
 
-  C3_memory="Die,C3";
-  pthread_exit(NULL);
- 
+    return (void *)sum;
 }
- 
+
 void* C3_monitor_function(void *arg){
-	while(C3_memory!="Die,C3"){
-        //Just for smooth running, we put to sleep for a few seconds.
-        sleep(1);
-        printf("[C3 MONITOR THREAD]: Locking execution thread.\n");
-        
-        if(C3_memory=="Lock C3")pthread_mutex_lock(&mutex3);
-        
-        sleep(3);
-        
-        printf("[C3 MONITOR THREAD]: Unlocking execution thread.\n");
-        
-        if(C3_memory=="Wake C3")pthread_mutex_unlock(&mutex3);
-        sleep(1);
-
+     sleep(1);
+    while(strcmp(C3_memory,"Die")!=0){ 
+        // If scheduler says to stop.
+        if((strcmp(MC3_memory,"Stop")==0) && (strcmp(C3_memory,"Die")!=0))strcpy(C3_memory,"Stop");
+        else break;
+     
+        // If scheduler says to start.
+        if(( strcmp(MC3_memory,"Start")) && (strcmp(C3_memory,"Die")!=0))strcpy(C3_memory,"Start");
+        else break;
     }
-    printf("[C3 MONITOR THREAD]: I'm done.");
-	
+
 }
- 
+
 void* C2_execution_function(void *arg)
-{
+{   
+    // Opening n2 file.
     FILE* fp1;
     fp1 = fopen("n2.txt","r");
     char str[8];
-   
-    
-	do{
-
-		pthread_mutex_lock(&mutex2);
+	do{ 
+        
+		while(strcmp(C2_memory,"Stop")==0)printf("[C2]: Locked by monitor...\n");
+            
+        //Critical section
         int num = atoi(str);
-        printf("%d\n" , num);
-        pthread_mutex_unlock(&mutex2);
+        printf("[C2]: %d\n" , num);
       } while(fgets(str,10,fp1)!=NULL);
-	
-	C2_memory="Die,C2";
- 
-  pthread_exit(NULL);
- 
-}
- 
-void* C2_monitor_function(void *arg){
-	while(C2_memory!="Die,C2"){
-        //Just for smooth running, we put to sleep for a few seconds.
-        sleep(1);
-        printf("[C2 MONITOR THREAD]: Locking execution thread.\n");
-        
-        if(C2_memory=="Lock C2")pthread_mutex_lock(&mutex2);
-        
-        
-        printf("[C2 MONITOR THREAD]: Unlocking execution thread.\n");
-        
-        if(C2_memory=="Wake C2")pthread_mutex_unlock(&mutex2);
-        sleep(1);
 
-    }
-    printf("[C2 MONITOR THREAD]: I'm done.");
-	
+    // Intimating to monitor that C2 is over.
+	strcpy(C2_memory,"Die");
 }
- 
+
+void* C2_monitor_function(void *arg){
+
+    sleep(1);
+    while(strcmp(C2_memory,"Die")!=0){ 
+        // If scheduler says to stop.
+        if((strcmp(MC2_memory,"Stop")==0) && (strcmp(C2_memory,"Die")!=0))strcpy(C2_memory,"Stop");
+        else break;
+     
+        // If scheduler says to start.
+        if(( strcmp(MC2_memory,"Start")) && (strcmp(C2_memory,"Die")!=0))strcpy(C2_memory,"Start");
+        else break;
+    }
+}
+
 
 void* C1_execution_function(void* argument){
-    
-    int arg = VOID_TO_INT(argument);
-    printf("Enter number of values when execution thread isn't sleeping:\n");
-    int n;
-    scanf("%d",&n);
 
+    int arg = 0;
+    printf("[C1]: Enter number of values when execution thread isn't sleeping:\n");
+    
+    int n;
+    scanf("%d",&n); 
     for(int i=0;i<n;i++){ 
-        pthread_mutex_lock(&mutex1);
-        
-        printf("[C1]: Unlocked by monitor...\n");
+        printf("C1 memory length: %d\n", strlen(C1_memory));
+        //while(!strlen(C1_memory))printf("Empty\n");
+        // Unless monitor tells me to start, I will be asleep.
+        while(strcmp(C1_memory,"Stop")==0)printf("[C1]: Locked by monitor...\n");
         
         //Critical section
         int x;
-        scanf("[C1]: Enter a number: %d\n",&x);
+        printf("[C1]: Enter a number: ");
+        scanf("%d",&x);
         arg += x;  
-        //printf("[C1]: Executing.\n");
-        pthread_mutex_unlock(&mutex1);
-           
     }
     printf("[C1]: SUM: %d\n",arg);
-    C1_memory="Die,C1";
+    
+    // Intimating to monitor that execution is over.
+    strcpy(C1_memory,"Die");
+    return (void *)arg;
 }
 
 void* C1_monitor_function(){
+    // If C1 is over, monitor thread should terminate.
+    sleep(1);
     
-    while(C1_memory!="Die,C1"){
-        //Just for smooth running, we put to sleep for a few seconds.
-        sleep(1);
-        //printf("[C1 MONITOR THREAD]: Locking execution thread.\n");
-        
-        if(C1_memory=="Lock C1")pthread_mutex_lock(&mutex1);
-        sleep(3);
-        
-        printf("[C1 MONITOR THREAD]: Unlocking execution thread.\n");
-        
-        if(C1_memory=="Wake C1")pthread_mutex_unlock(&mutex1);
-        sleep(1);
-    }
-    printf("[C1 MONITOR THREAD] I'm done.");
-}
- 
+    while(strcmp(C1_memory,"Die")!=0){ 
+         printf("[C1 MONITOR THREAD]: hello\n");   
+        // If scheduler says to stop.
+        if(strcmp(C1_memory,"Die")!=0)if(strcmp(MC1_memory,"Stop")==0)strcpy(C1_memory,"Stop");
+        else break;
 
-// Driver code
+        // If scheduler says to start.
+        if(strcmp(C1_memory,"Die")!=0)if(strcmp(MC1_memory,"Start")==0)strcpy(C1_memory,"Start");
+        else break;
+
+       
+    }
+}
+
 int main()
-{
+{   //Process PIDs.
 	int pid, pid1, pid2;
+
+    // Pipes.
     int p1[2],p3[2];
+
+    // List of shared memories. 
+    // C1,C2,C3 are for monitor-to-execution thread communication.
+   C1_memory = share_memory(128);
+   strcpy(C1_memory,"Blank");
+   C2_memory = share_memory(128);
+   strcpy(C1_memory,"Blank");
+   C3_memory = share_memory(128);
+   strcpy(C1_memory,"Blank");
+
+   // MC1,MC2,MC3 are main-to-process communication
+   MC1_memory = share_memory(128);
+   strcpy(MC1_memory,"Start");
+
+   MC2_memory = share_memory(128);
+   strcpy(MC2_memory,"Start");
+
+   MC3_memory = share_memory(128);
+   strcpy(MC3_memory,"Start");
     
-    //creating pipes
+    
+    //Creating pipes.
     if (pipe(p1)==-1)
 	{
 		fprintf(stderr, "Pipe Failed" );
@@ -211,25 +193,7 @@ int main()
 		fprintf(stderr, "Pipe Failed" );
 		return 1;
 	}
-
-   
-    // List of all shared memories.
-    int shmid1 = shmget(ftok("/etc",65),1024,0666|IPC_CREAT);
-    C1_memory=(char*) shmat(shmid1,(void*)0,0);
-
-    int shmid2 = shmget(ftok("/var",65),1024,0666|IPC_CREAT);
-    C2_memory=(char*) shmat(shmid2,(void*)0,0);
-
-    int shmid3 = shmget(ftok("/dev",65),1024,0666|IPC_CREAT);
-    C3_memory=(char*) shmat(shmid3,(void*)0,0);
-
-    int shmid4 = shmget(ftok("/tmp",65),1024,0666|IPC_CREAT);
-    results1=(char*) shmat(shmid4,(void*)0,0);
-
-    int shmid5 = shmget(ftok("/bin",65),1024,0666|IPC_CREAT);
-    results3=(char*) shmat(shmid5,(void*)0,0);
-
-
+ 
  
 	// variable pid will store the
 	// value returned from fork() system call
@@ -238,96 +202,100 @@ int main()
 	// If fork() returns zero then it
 	// means it is child process.
 	if (pid == 0) {
+
+        // C1
+
+       strcpy(MC1_memory,"Start");// Setting to start so C1 will start immediately.
+       printf("MC1 Memory: %s\n",MC1_memory);
+
 		pthread_t C1_monitor_thread;
 		pthread_t C1_execution_thread;
-    
-    	long sum = 0;
 
-		//Concurrent execution of both threads
+        void* status; // To store return value from execution thread.
+
+        //Concurrent execution of both threads
 		pthread_create(&C1_monitor_thread , NULL, C1_monitor_function,NULL);
-    	pthread_create(&C1_execution_thread , NULL, C1_execution_function,INT_TO_VOID(sum));
+    	pthread_create(&C1_execution_thread , NULL, C1_execution_function,NULL);
 
 		//pthread_join waits for the threads passed as argument to finish(terminate).
-    	pthread_join(C1_execution_thread , NULL);
-    	pthread_join(C1_monitor_thread, NULL);
-    	
-        sum = sti2(results1);
-		printf("Sum: %ld",sum);
+    	pthread_join(C1_execution_thread , &status); //The value returned by the execution function will be stored in status.
+    	//pthread_join(C1_monitor_thread, NULL); 
+
+        int sum = (int)status; // Type casting status to int and storing in sum.
+
+        //printf("Sum inside C1 child: %ld\n",sum);
+        printf("------------------------------------------------\n");
 
         close(p1[0]);
-        write(p1[1],&sum,sizeof(sum));
+        write(p1[1],&sum,sizeof(sum)); // Writing sum to pipe.
         close(p1[1]);
+        sleep(2);
 
-		
-	}
+    }
 
-	else {
+        else {
         wait(NULL);
 		pid1 = fork();
 		if (pid1 == 0) {
             //C2
-			pthread_t C2_monitor_thread;
+
+            strcpy(MC2_memory,"Start");
+
+            pthread_t C2_monitor_thread;
 			pthread_t C2_execution_thread;
-    
+
 			//Concurrent execution of both threads
 			pthread_create(&C2_monitor_thread , NULL, C2_monitor_function,NULL);
     		pthread_create(&C2_execution_thread , NULL, C2_execution_function,NULL);
 
-			//pthread_join waits for the threads passed as argument to finish(terminate).
+            //pthread_join waits for the threads passed as argument to finish(terminate).
     		pthread_join(C2_execution_thread , NULL);
     		pthread_join(C2_monitor_thread, NULL);
+            printf("------------------------------------------------\n");
+            sleep(2);
 		}
 		else {
             wait(NULL);
 			pid2 = fork();
 			if (pid2 == 0) {
-                
                 //C3
+                strcpy(MC3_memory,"Start");
+
 				pthread_t C3_monitor_thread;
 				pthread_t C3_execution_thread;
-                long sum2 = 0;
-				
-				//Concurrent execution of both threads
+                
+
+                void* status;
+
+                //Concurrent execution of both threads
 				pthread_create(&C3_monitor_thread , NULL, C3_monitor_function,NULL);
-    			pthread_create(&C3_execution_thread , NULL, C3_execution_function,INT_TO_VOID(sum2));
+    			pthread_create(&C3_execution_thread , NULL, C3_execution_function,NULL);
 
-				//pthread_join waits for the threads passed as argument to finish(terminate).
-    			pthread_join(C3_execution_thread , NULL);
-    			pthread_join(C3_monitor_thread, NULL);
+                pthread_join(C3_execution_thread , &status);
+                int sum2 = (int)status;
+    		    pthread_join(C3_monitor_thread, NULL);
 
-                sum2 = sti2(results3);
- 
-				//sending output via pipes
                 close(p3[0]);
-                write(p3[1],sum2,sizeof(sum2));
+                write(p3[1],&sum2,sizeof(sum2));
                 close(p3[1]);
-				
-                //execlp("./C3.out", "C3", NULL);
-			}
- 
-			// If value returned from fork()
-			// in not zero and >0 that means
-			// this is parent process.
-			else {
-				
-				wait(NULL);
+                sleep(2);
+            }
+            else{
+
+                wait(NULL);
  
                 int c1_sum,c3_sum;
- 
-                //getting message via pipe from C1
+                
+                // Getting message via pipe from C1.
                 read(p1[0],&c1_sum,sizeof(c1_sum));
                 close(p1[0]);
                 printf("C1 output: %d\n",c1_sum);
 
-                //getting message via pipe from C3
+                // Getting message via pipe from C3.
                 read(p3[0],&c3_sum,sizeof(c3_sum));
-                close(p3[0]);
+                close(p3[0]); 
                 printf("C3 output: %d\n",c3_sum);
-                
-				printf("parent --> pid = %d\n", getpid());
-			}
-		}
-	}
- 
-	return 0;
-}
+            }
+        }
+        }
+    }
