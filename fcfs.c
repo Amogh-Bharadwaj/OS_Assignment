@@ -12,7 +12,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <pthread.h>
-#include <
+#include <time.h>
 #include <sys/mman.h>
 
 void* share_memory(size_t size) {
