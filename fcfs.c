@@ -3,12 +3,12 @@
 // TO BE FIXED: Critical section being skipped [Not performing input of numbers] and C1 not terminating.
 
 #define _GNU_SOURCE
-#include<stdio.h>
-#include<stdlib.h>
-#include<unistd.h>
-#include<sys/types.h>
-#include<string.h>
-#include<sys/wait.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <string.h>
+#include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <pthread.h>
