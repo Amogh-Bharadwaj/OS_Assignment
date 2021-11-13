@@ -44,6 +44,7 @@ int sti(char s[]){
 }
 
 void* C3_execution_function(void *arg){  
+    sleep(1);
     // Opening n3 text file.
     FILE* fp;
     fp = fopen("n3.txt" , "r");
@@ -52,7 +53,7 @@ void* C3_execution_function(void *arg){
 
     do {
         // C3 is asleep until monitor tells to wake up.
-		while(strcmp(C3_memory,"Stop")==0)printf("[C3]: Locked by monitor...\n");
+		while(strcmp(C3_memory,"Stop")==0);//printf("[C3]: Locked by monitor...\n");
         
         // Critical section
         sum += atoi(str);
@@ -79,6 +80,7 @@ void* C3_monitor_function(void *arg){
 
 void* C2_execution_function(void *arg)
 {   
+    sleep(1);
     // Opening n2 file.
     FILE* fp1;
     fp1 = fopen("n2.txt","r");
@@ -112,22 +114,25 @@ void* C2_monitor_function(void *arg){
 
 
 void* C1_execution_function(void* argument){
-
+    
+    while(strcmp(C1_memory,"Start")!=0)printf("C1 ready.\n");
     int arg = 0;
     printf("[C1]: Enter number of values when execution thread isn't sleeping:\n");
     
     int n;
     scanf("%d",&n); 
+   
     for(int i=0;i<n;i++){ 
         printf("C1 memory length: %d\n", strlen(C1_memory));
         //while(!strlen(C1_memory))printf("Empty\n");
         // Unless monitor tells me to start, I will be asleep.
-        while(strcmp(C1_memory,"Stop")==0)printf("[C1]: Locked by monitor...\n");
+        while(strcmp(C1_memory,"Stop")==0){printf("[C1]: Locked by monitor...\n");}
         
         //Critical section
         int x;
         printf("[C1]: Enter a number: ");
         scanf("%d",&x);
+        sleep(1);
         arg += x;  
     }
     printf("[C1]: SUM: %d\n",arg);
@@ -139,12 +144,12 @@ void* C1_execution_function(void* argument){
 
 void* C1_monitor_function(){
     // If C1 is over, monitor thread should terminate.
-    sleep(1);
     
+    sleep(2);
     while(strcmp(C1_memory,"Die")!=0){ 
          printf("[C1 MONITOR THREAD]: hello\n");   
         // If scheduler says to stop.
-        if(strcmp(C1_memory,"Die")!=0)if(strcmp(MC1_memory,"Stop")==0)strcpy(C1_memory,"Stop");
+        if(strcmp(C1_memory,"Die")!=0)if(strcmp(MC1_memory,"Stop")==0){printf("In here\n");strcpy(C1_memory,"Stop");}
         else break;
 
         // If scheduler says to start.
@@ -167,19 +172,19 @@ int main()
    C1_memory = share_memory(128);
    strcpy(C1_memory,"Blank");
    C2_memory = share_memory(128);
-   strcpy(C1_memory,"Blank");
+   strcpy(C2_memory,"Blank");
    C3_memory = share_memory(128);
-   strcpy(C1_memory,"Blank");
+   strcpy(C3_memory,"Blank");
 
    // MC1,MC2,MC3 are main-to-process communication
    MC1_memory = share_memory(128);
-   strcpy(MC1_memory,"Start");
+   strcpy(MC1_memory,"Stop");
 
    MC2_memory = share_memory(128);
-   strcpy(MC2_memory,"Start");
+   strcpy(MC2_memory,"Stop");
 
    MC3_memory = share_memory(128);
-   strcpy(MC3_memory,"Start");
+   strcpy(MC3_memory,"Stop");
     
     
     //Creating pipes.
@@ -204,9 +209,7 @@ int main()
 	if (pid == 0) {
 
         // C1
-
-       strcpy(MC1_memory,"Start");// Setting to start so C1 will start immediately.
-       printf("MC1 Memory: %s\n",MC1_memory);
+        strcpy(MC1_memory,"Stop");
 
 		pthread_t C1_monitor_thread;
 		pthread_t C1_execution_thread;
@@ -219,7 +222,7 @@ int main()
 
 		//pthread_join waits for the threads passed as argument to finish(terminate).
     	pthread_join(C1_execution_thread , &status); //The value returned by the execution function will be stored in status.
-    	//pthread_join(C1_monitor_thread, NULL); 
+    	pthread_join(C1_monitor_thread, NULL); 
 
         int sum = (int)status; // Type casting status to int and storing in sum.
 
@@ -234,12 +237,11 @@ int main()
     }
 
         else {
-        wait(NULL);
+        //wait(NULL);
 		pid1 = fork();
 		if (pid1 == 0) {
-            //C2
-
-            strcpy(MC2_memory,"Start");
+            strcpy(MC2_memory,"Stop");
+            if(strcmp(MC2_memory,"Start")==0){
 
             pthread_t C2_monitor_thread;
 			pthread_t C2_execution_thread;
@@ -252,20 +254,26 @@ int main()
     		pthread_join(C2_execution_thread , NULL);
     		pthread_join(C2_monitor_thread, NULL);
             printf("------------------------------------------------\n");
-            sleep(2);
+            }
+            
 		}
 		else {
-            wait(NULL);
+            //wait(NULL);
+            
 			pid2 = fork();
 			if (pid2 == 0) {
                 //C3
-                strcpy(MC3_memory,"Start");
 
+                strcpy(MC3_memory,"Stop");
+              
+            
 				pthread_t C3_monitor_thread;
 				pthread_t C3_execution_thread;
                 
 
                 void* status;
+
+                if(strcmp(MC3_memory,"Start")==0){
 
                 //Concurrent execution of both threads
 				pthread_create(&C3_monitor_thread , NULL, C3_monitor_function,NULL);
@@ -278,23 +286,45 @@ int main()
                 close(p3[0]);
                 write(p3[1],&sum2,sizeof(sum2));
                 close(p3[1]);
-                sleep(2);
+                }
             }
             else{
 
-                wait(NULL);
+                
  
                 int c1_sum,c3_sum;
-                
-                // Getting message via pipe from C1.
-                read(p1[0],&c1_sum,sizeof(c1_sum));
-                close(p1[0]);
-                printf("C1 output: %d\n",c1_sum);
 
-                // Getting message via pipe from C3.
-                read(p3[0],&c3_sum,sizeof(c3_sum));
-                close(p3[0]); 
-                printf("C3 output: %d\n",c3_sum);
+                strcpy(MC1_memory,"Start");
+
+                if(strcmp(C1_memory,"Die")==0){
+                        // Getting message via pipe from C1.
+                        printf("C1_memory inside parent: %s\n",C1_memory);
+                        read(p1[0],&c1_sum,sizeof(c1_sum));
+                        close(p1[0]);
+                        printf("C1 output: %d\n",c1_sum);
+
+                        strcpy(MC2_memory,"Start");
+
+                        if(strcmp(C2_memory,"Die")==0){
+
+                            strcpy(MC3_memory,"Start");
+
+                            if(strcmp(C3_memory,"Die")==0){
+                                    // Getting message via pipe from C3.
+                                    read(p3[0],&c3_sum,sizeof(c3_sum));
+                                    close(p3[0]); 
+                                    printf("C3 output: %d\n",c3_sum);
+                                
+                            }
+                        }
+                }
+                
+                
+
+                
+               
+
+               
             }
         }
         }
