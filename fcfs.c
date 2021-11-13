@@ -3,12 +3,12 @@
 // TO BE FIXED: Critical section being skipped [Not performing input of numbers] and C1 not terminating.
 
 #define _GNU_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <string.h>
-#include <sys/wait.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<sys/types.h>
+#include<string.h>
+#include<sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <pthread.h>
@@ -24,6 +24,7 @@ void* share_memory(size_t size) {
 char* C1_memory; // Interthread communication (monitor thread of C1 to execution thread of C1).
 char* C2_memory;
 char* C3_memory;
+
 char* MC1_memory; // This is for Main to the three processes.
 char* MC2_memory;
 char* MC3_memory;
@@ -158,8 +159,13 @@ int main()
     // List of shared memories. 
     // C1,C2,C3 are for monitor-to-execution thread communication.
    C1_memory = share_memory(128);
+   strcpy(C1_memory,"Blank");
+
    C2_memory = share_memory(128);
+   strcpy(C2_memory,"Blank");
+   
    C3_memory = share_memory(128);
+   strcpy(C3_memory,"Blank");
 
    // MC1,MC2,MC3 are main-to-process communication
    MC1_memory = share_memory(128);
