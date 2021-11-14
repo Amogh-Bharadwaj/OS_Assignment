@@ -137,7 +137,7 @@ void* C2_execution_function(void *arg)
             
         //Critical section
         int num = atoi(str);
-        printf("[C2]: %d\n" , num);
+        //printf("[C2]: %d\n" , num);
         pthread_mutex_unlock(&mutex);
     }
 
@@ -394,7 +394,7 @@ int main()
                 // Getting message via pipe from C1.
                 read(p1[0],&c1_sum,sizeof(c1_sum));
                 close(p1[0]);
-                printf("C1 output: %d\n",c1_sum);
+                
 
                 C1_Finish_Time=clock();
 
@@ -414,6 +414,9 @@ int main()
                 // Getting message via pipe from C2.
                 read(p2[0],buf,14);
                 close(p2[0]);
+
+                printf("C1 output: %lld\n",c1_sum);
+
                 printf("C2 output: %s\n",buf);
 
                 C2_Finish_Time=clock();
@@ -434,7 +437,7 @@ int main()
                 // Getting message via pipe from C3.
                 read(p3[0],&c3_sum,sizeof(c3_sum));
                 close(p3[0]); 
-                printf("C3 output: %d\n",c3_sum);
+                printf("C3 output: %lld\n",c3_sum);
 
                 C3_Finish_Time=clock();
 
