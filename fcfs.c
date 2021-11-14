@@ -417,9 +417,7 @@ int main()
                 read(p2[0],buf,14);
                 close(p2[0]);
 
-                printf("C1 output: %lld\n",c1_sum);
-
-                printf("C2 output: %s\n",buf);
+               
 
                 C2_Finish_Time=clock();
 
@@ -439,7 +437,7 @@ int main()
                 // Getting message via pipe from C3.
                 read(p3[0],&c3_sum,sizeof(c3_sum));
                 close(p3[0]); 
-                printf("C3 output: %lld\n",c3_sum);
+                
 
                 C3_Finish_Time=clock();
 
@@ -448,6 +446,11 @@ int main()
 
 
                 printf("\n-------------------------------------------\nOutput:\n");
+
+                printf("C1 output: %lld\n",c1_sum);
+                printf("C2 output: %s\n",buf);
+                printf("C3 output: %lld\n\n",c3_sum);
+
                 printf("C1 arrived at t = %f ms\n",C1_Arrival_Time);
                 printf("C1 starts at t = %f ms\n",C1_Wait_Time);
                 printf("C1's Waiting Time: %f ms\n",C1_Wait_Time);
