@@ -57,7 +57,7 @@ void* C3_execution_function(void *arg){
     
     // Opening n3 text file.
     FILE* fp;
-    fp = fopen("n3.txt" , "r");
+    fp = fopen("sample.txt" , "r");
     char str[8];
 	long sum=0;
 
@@ -107,7 +107,7 @@ void* C2_execution_function(void *arg)
 {   
     // Opening n2 file.
     FILE* fp1;
-    fp1 = fopen("n2.txt","r");
+    fp1 = fopen("sample.txt","r");
     char str[8];
     
 	while(fgets(str,10,fp1)!=NULL){
@@ -157,11 +157,13 @@ void* C2_monitor_function(void *arg){
 
 void* C1_execution_function(void* argument){
 
-    long arg = 0;
+    long long arg = 0;
     printf("[C1]: Enter number of values when execution thread isn't sleeping:\n");
     
     int n;
     scanf("%d",&n); 
+    int arr[n];
+    for(int i=0;i<n;i++)arr[i]=(rand()%1000000);
     for(int i=0;i<n;i++){ 
         // Unless monitor tells me to start, I will be asleep.
         
@@ -169,13 +171,10 @@ void* C1_execution_function(void* argument){
         while(!play1){printf("[C1]: Locked by monitor...\n");pthread_cond_wait(&T1,&mutex);}
         
         //Critical section
-        int x;
-        printf("[C1]: Enter a number: ");
-        scanf("%d",&x);
-        arg += x;  
+        arg+=arr[i];  
         pthread_mutex_unlock(&mutex);
     }
-    printf("[C1]: SUM: %ld\n",arg);
+    printf("[C1]: SUM: %lld\n",arg);
    
     // Intimating to monitor that execution is over.
     strcpy(MC1_memory,"Die");
@@ -453,18 +452,18 @@ int main()
 
                 printf("\n-------------------------------------------\nOutput:\n");
                 printf("C1 arrived at t = %f ms\n",C1_Arrival_Time);
-                printf("C1 starts at t = %f ms\n",C1_Start_Time);
+                printf("C1 starts at t = %f ms\n",C1_Wait_Time);
                 printf("C1's Waiting Time: %f ms\n",C1_Wait_Time);
                 printf("C1's Turnaround Time: %f ms\n\n",C1_Turnaround_Time);
                
                
                 printf("C2 arrived at t = %f ms\n",C2_Arrival_Time);
-                printf("C2 starts at t = %f ms\n",C2_Start_Time);
+                printf("C2 starts at t = %f ms\n",C2_Wait_Time);
                 printf("C2's Waiting Time: %f ms\n",C2_Wait_Time);
                 printf("C2's Turnaround Time: %f ms\n\n",C2_Turnaround_Time);
 
                 printf("C3 arrived at t = %f ms\n",C3_Arrival_Time);
-                printf("C3 starts at t = %f ms\n",C3_Start_Time);
+                printf("C3 starts at t = %f ms\n",C3_Wait_Time);
                 printf("C3's Waiting Time: %f ms\n",C3_Wait_Time);
                 printf("C3's Turnaround Time: %f ms\n\n",C3_Turnaround_Time);
                 
