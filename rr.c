@@ -23,6 +23,23 @@
 pthread_cond_t T1=PTHREAD_COND_INITIALIZER,T2=PTHREAD_COND_INITIALIZER,T3=PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
+union void_cast {
+    void* ptr;
+    int value;
+};
+
+int VOID_TO_INT(void* ptr) {
+    union void_cast u;
+    u.ptr = ptr;
+    return u.value;
+}
+
+void* INT_TO_VOID(int value) {
+    union void_cast u;
+    u.value = value;
+    return u.ptr;
+}
+
 int play1=0,play2=0,play3=0;
 
 void* share_memory(size_t size) {
@@ -64,8 +81,10 @@ void* C3_execution_function(void *arg){
     fp = fopen("sample.txt" , "r");
     char str[8];
 	long sum=0;
+    
+    int n3 = VOID_TO_INT(arg);
 
-    while(fgets(str,10,fp)!=NULL){
+    while(fgets(str,10,fp)!=NULL && n3--){
         // C3 is asleep until monitor tells to wake up.
 		pthread_mutex_lock(&mutex);
         while(!play3){pthread_cond_wait(&T3,&mutex);}
@@ -115,8 +134,12 @@ void* C2_execution_function(void *arg)
     FILE* fp1;
     fp1 = fopen("sample.txt","r");
     char str[8];
+
+    int n2 = VOID_TO_INT(arg);
+
+
     
-	while(fgets(str,10,fp1)!=NULL){
+	while(fgets(str,10,fp1)!=NULL && n2-- ){
         pthread_mutex_lock(&mutex);
         while(!play2){pthread_cond_wait(&T2,&mutex);}
             
@@ -125,6 +148,8 @@ void* C2_execution_function(void *arg)
         printf("[C2]: %d\n" , num);
         pthread_mutex_unlock(&mutex);
     }
+
+    return ;
     
     // Intimating to monitor that C2 is over.
 	//strcpy(D2,"Die");
@@ -164,13 +189,13 @@ void* C2_monitor_function(void *arg){
 void* C1_execution_function(void* argument){
 
     long long arg = 0;
-    printf("[C1]: Enter number of values when execution thread isn't sleeping:\n");
+    //printf("[C1]: Enter number of values when execution thread isn't sleeping:\n");
     
-    int n;
-    scanf("%d",&n); 
-    int arr[n];
-    for(int i=0;i<n;i++)arr[i]=(rand()%1000000);
-    for(int i=0;i<n;i++){ 
+    int n1 = VOID_TO_INT(argument);
+    
+    int arr[n1];
+    for(int i=0;i<n1;i++)arr[i]=(rand()%1000000);
+    for(int i=0;i<n1;i++){ 
         // Unless monitor tells me to start, I will be asleep.
         
         pthread_mutex_lock(&mutex);
@@ -218,7 +243,6 @@ void* C1_monitor_function(){
             pthread_cond_signal(&T1);
             pthread_mutex_unlock(&mutex);
         }
-        
     }
 }
 
@@ -256,6 +280,18 @@ int main()
 
    clock_t C1_Arrival,C2_Arrival,C3_Arrival;
    double C1_Arrival_Time,C2_Arrival_Time,C3_Arrival_Time;
+
+   int n1,n2,n3;
+   printf("Enter n1: ");
+   scanf("%d",&n1);
+
+   printf("\nEnter n2: ");
+   scanf("%d",&n2);
+
+   printf("\nEnter n3: ");
+   scanf("%d",&n3);
+
+
     
     
     //Creating pipes.
@@ -298,7 +334,7 @@ int main()
         void* status; // To store return value from execution thread.
 
         //Concurrent execution of both threads
-        pthread_create(&C1_execution_thread , NULL, C1_execution_function,NULL);
+        pthread_create(&C1_execution_thread , NULL, C1_execution_function,INT_TO_VOID(n1));
         sleep(2);
 		pthread_create(&C1_monitor_thread , NULL, C1_monitor_function,NULL);
     	
@@ -335,8 +371,9 @@ int main()
             pthread_t C2_monitor_thread;
 
 			//Concurrent execution of both threads
+            pthread_create(&C2_execution_thread , NULL, C2_execution_function,INT_TO_VOID(n2));
 			pthread_create(&C2_monitor_thread , NULL, C2_monitor_function,NULL);
-    		pthread_create(&C2_execution_thread , NULL, C2_execution_function,NULL);
+    		
 
             //pthread_join waits for the threads passed as argument to finish(terminate).
     		pthread_join(C2_execution_thread , NULL);
@@ -363,7 +400,7 @@ int main()
 
                 //Concurrent execution of both threads
 				
-    			pthread_create(&C3_execution_thread , NULL, C3_execution_function,NULL);
+    			pthread_create(&C3_execution_thread , NULL, C3_execution_function,INT_TO_VOID(n3));
                 pthread_create(&C3_monitor_thread , NULL, C3_monitor_function,NULL);
 
                 pthread_join(C3_execution_thread , &status);
@@ -405,8 +442,8 @@ int main()
 
                     if((strcmp(D1,"Die")==0) && (strcmp(D2,"Die")==0) && (strcmp(D3,"Die")==0))break;
                 }
-                    
-                       
+
+
                         // Getting message via pipe from C1.
                         read(p1[0],&c1_sum,sizeof(c1_sum));
                         close(p1[0]);

@@ -20,6 +20,23 @@
  We use this to communicate between threads.
 */
 
+union void_cast {
+    void* ptr;
+    int value;
+};
+
+int VOID_TO_INT(void* ptr) {
+    union void_cast u;
+    u.ptr = ptr;
+    return u.value;
+}
+
+void* INT_TO_VOID(int value) {
+    union void_cast u;
+    u.value = value;
+    return u.ptr;
+}
+
 pthread_cond_t T1=PTHREAD_COND_INITIALIZER,T2=PTHREAD_COND_INITIALIZER,T3=PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -61,7 +78,9 @@ void* C3_execution_function(void *arg){
     char str[8];
 	long sum=0;
 
-    while(fgets(str,10,fp)!=NULL){
+    int n3 = VOID_TO_INT(arg);
+
+    while(fgets(str,10,fp)!=NULL && n3--){
         // C3 is asleep until monitor tells to wake up.
 		pthread_mutex_lock(&mutex);
         while(!play3){printf("[C3]: Locked by monitor...\n");pthread_cond_wait(&T3,&mutex);}
@@ -109,8 +128,10 @@ void* C2_execution_function(void *arg)
     FILE* fp1;
     fp1 = fopen("sample.txt","r");
     char str[8];
+
+    int n2 = VOID_TO_INT(arg);
     
-	while(fgets(str,10,fp1)!=NULL){
+	while(fgets(str,10,fp1)!=NULL && n2--){
         pthread_mutex_lock(&mutex);
         while(!play2){printf("[C2]: Locked by monitor...\n");pthread_cond_wait(&T2,&mutex);}
             
@@ -158,13 +179,11 @@ void* C2_monitor_function(void *arg){
 void* C1_execution_function(void* argument){
 
     long long arg = 0;
-    printf("[C1]: Enter number of values when execution thread isn't sleeping:\n");
     
-    int n;
-    scanf("%d",&n); 
-    int arr[n];
-    for(int i=0;i<n;i++)arr[i]=(rand()%1000000);
-    for(int i=0;i<n;i++){ 
+    int n1 = VOID_TO_INT(argument);
+    int arr[n1];
+    for(int i=0;i<n1;i++)arr[i]=(rand()%1000000);
+    for(int i=0;i<n1;i++){ 
         // Unless monitor tells me to start, I will be asleep.
         
         pthread_mutex_lock(&mutex);
@@ -174,7 +193,7 @@ void* C1_execution_function(void* argument){
         arg+=arr[i];  
         pthread_mutex_unlock(&mutex);
     }
-    printf("[C1]: SUM: %lld\n",arg);
+    //printf("[C1]: SUM: %lld\n",arg);
    
     // Intimating to monitor that execution is over.
     strcpy(MC1_memory,"Die");
@@ -236,6 +255,16 @@ int main()
    MC3_memory = share_memory(128);
    strcpy(MC3_memory,"Stop");
 
+    int n1,n2,n3;
+   printf("Enter n1: ");
+   scanf("%d",&n1);
+
+   printf("\nEnter n2: ");
+   scanf("%d",&n2);
+
+   printf("\nEnter n3: ");
+   scanf("%d",&n3);
+
 
    clock_t C1_Arrival,C2_Arrival,C3_Arrival;
    double C1_Arrival_Time,C2_Arrival_Time,C3_Arrival_Time;
@@ -271,17 +300,13 @@ int main()
 	if (pid == 0) {
 
         // C1
-        //strcpy(MC1_memory,"Start");// Setting to start so C1 will start immediately.
-
-        
-
 		pthread_t C1_monitor_thread;
 		pthread_t C1_execution_thread;
 
         void* status; // To store return value from execution thread.
 
         //Concurrent execution of both threads
-        pthread_create(&C1_execution_thread , NULL, C1_execution_function,NULL);
+        pthread_create(&C1_execution_thread , NULL, C1_execution_function,INT_TO_VOID(n1));
         sleep(2);
 		pthread_create(&C1_monitor_thread , NULL, C1_monitor_function,NULL);
     	
@@ -292,9 +317,6 @@ int main()
 
         long sum = (long)status; // Type casting status to long and storing in sum.
 
-        //printf("Sum inside C1 child: %ld\n",sum);
-        //printf("------------------------------------------------\n");
-
         close(p1[0]);
         write(p1[1],&sum,sizeof(sum)); // Writing sum to pipe.
         close(p1[1]);
@@ -303,7 +325,7 @@ int main()
     }
 
         else {
-        //wait(NULL);
+        
         C2_Arrival = clock();
         C2_Arrival_Time = (C2_Arrival/CLOCKS_PER_SEC)*1000;
 
@@ -311,16 +333,6 @@ int main()
 		pid1 = fork();
 		if (pid1 == 0) {
             //C2
-
-            
- 
-            
-            //while(strcmp(MC1_memory,"Die")!=0);
-            //printf("C2\n");
- 
-
-            //strcpy(MC2_memory,"Start");
-
            
 			pthread_t C2_execution_thread;
             sleep(1);
@@ -328,7 +340,7 @@ int main()
 
 			//Concurrent execution of both threads
 			pthread_create(&C2_monitor_thread , NULL, C2_monitor_function,NULL);
-    		pthread_create(&C2_execution_thread , NULL, C2_execution_function,NULL);
+    		pthread_create(&C2_execution_thread , NULL, C2_execution_function,INT_TO_VOID(n2));
 
             //pthread_join waits for the threads passed as argument to finish(terminate).
     		pthread_join(C2_execution_thread , NULL);
@@ -339,28 +351,20 @@ int main()
            
 		}
 		else {
-            //wait(NULL);
             
             C3_Arrival = clock();
             C3_Arrival_Time = (C3_Arrival/CLOCKS_PER_SEC)*1000;
             
 			pid2 = fork();
 			if (pid2 == 0) {               
-                //while(strcmp(MC2_memory,"Die")!=0)sleep(0.1);
-                //printf("C3\n");
-               
-                //C3
-                //strcpy(MC3_memory,"Start");
-
+               //C3
 				pthread_t C3_monitor_thread;
 				pthread_t C3_execution_thread;
                 
-
                 void* status;
 
                 //Concurrent execution of both threads
-				
-    			pthread_create(&C3_execution_thread , NULL, C3_execution_function,NULL);
+    			pthread_create(&C3_execution_thread , NULL, C3_execution_function,INT_TO_VOID(n3));
                 sleep(1);
                 pthread_create(&C3_monitor_thread , NULL, C3_monitor_function,NULL);
 
@@ -375,8 +379,6 @@ int main()
             }
             else{
 
-                //wait(NULL);
-              
                 int c1_sum,c3_sum;
 
                 clock_t C1_Start ,C1_Finish_Time;
@@ -386,14 +388,8 @@ int main()
 
                 double C1_Start_Time = (C1_Start/CLOCKS_PER_SEC)*1000;
                 
-
-
                 strcpy(MC1_memory,"Start");
                 while(strcmp(MC1_memory,"Die"));
-
-                
-              
-
 
                 // Getting message via pipe from C1.
                 read(p1[0],&c1_sum,sizeof(c1_sum));
@@ -412,12 +408,8 @@ int main()
 
                 double C2_Start_Time = (C2_Start/CLOCKS_PER_SEC)*1000;
 
-
-
                 strcpy(MC2_memory,"Start");
                 while(strcmp(MC2_memory,"Die"));
-
-                
                 
                 // Getting message via pipe from C2.
                 read(p2[0],buf,14);
