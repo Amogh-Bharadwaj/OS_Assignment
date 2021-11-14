@@ -86,6 +86,7 @@ void* C3_execution_function(void *arg){
         while(!play3){printf("[C3]: Locked by monitor...\n");pthread_cond_wait(&T3,&mutex);}
         
         // Critical section
+        printf("[C3]: Adding....\n");
         sum += atoi(str);
         pthread_mutex_unlock(&mutex);
     }
@@ -137,7 +138,7 @@ void* C2_execution_function(void *arg)
             
         //Critical section
         int num = atoi(str);
-        //printf("[C2]: %d\n" , num);
+        printf("[C2]: %d\n" , num);
         pthread_mutex_unlock(&mutex);
     }
 
@@ -190,6 +191,7 @@ void* C1_execution_function(void* argument){
         while(!play1){printf("[C1]: Locked by monitor...\n");pthread_cond_wait(&T1,&mutex);}
         
         //Critical section
+        printf("[C1]: Adding\n");
         arg+=arr[i];  
         pthread_mutex_unlock(&mutex);
     }
