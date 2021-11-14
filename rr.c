@@ -149,7 +149,7 @@ void* C2_execution_function(void *arg)
         pthread_mutex_unlock(&mutex);
     }
 
-    return ;
+    
     
     // Intimating to monitor that C2 is over.
 	//strcpy(D2,"Die");
@@ -202,7 +202,7 @@ void* C1_execution_function(void* argument){
         while(!play1){pthread_cond_wait(&T1,&mutex);}
         
         //Critical section
-        printf("[C1]: Adding..\n");
+        //printf("[C1]: Adding..\n");
         arg+=arr[i];  
         pthread_mutex_unlock(&mutex);
     }
@@ -281,6 +281,9 @@ int main()
    clock_t C1_Arrival,C2_Arrival,C3_Arrival;
    double C1_Arrival_Time,C2_Arrival_Time,C3_Arrival_Time;
 
+   clock_t C1_Last,C2_Last,C3_Last;
+   double C1_Last_Time,C2_Last_Time,C3_Last_Time;
+
    int n1,n2,n3;
    printf("Enter n1: ");
    scanf("%d",&n1);
@@ -316,6 +319,7 @@ int main()
 	// value returned from fork() system call
     C1_Arrival = clock();
     C1_Arrival_Time = (C1_Arrival/CLOCKS_PER_SEC)*1000;
+    C1_Last_Time = C1_Arrival_Time;
     
 	pid = fork();
  
@@ -360,7 +364,7 @@ int main()
         //wait(NULL);
         C2_Arrival = clock();
         C2_Arrival_Time = (C2_Arrival/CLOCKS_PER_SEC)*1000;
-
+        C2_Last_Time = C2_Arrival_Time;
 
 		pid1 = fork();
 		if (pid1 == 0) {
@@ -389,6 +393,7 @@ int main()
             
             C3_Arrival = clock();
             C3_Arrival_Time = (C3_Arrival/CLOCKS_PER_SEC)*1000;
+            C3_Last_Time = C3_Arrival_Time;
 
 			pid2 = fork();
 			if (pid2 == 0) {               
@@ -416,14 +421,23 @@ int main()
 
                 //wait(NULL);
                 unsigned long long int c1_sum,c3_sum;
-
+                double C1_Wait_Time=0,C2_Wait_Time=0,C3_Wait_Time=0;
                 while(1){
                     
                    
                     if(strcmp(D1,"Die")!=0){
+                        clock_t temp = clock();
+                        double temp_time = (temp/CLOCKS_PER_SEC)*1000;
+                        //C1_Wait_Time += temp_time - C1_Last_Time;
+                        printf("C1 starts at %f\n",temp_time);
                         strcpy(MC1_memory,"Start");
                         sleep(2);
                         strcpy(MC1_memory,"Stop");
+                        temp = clock();
+                        temp_time = (temp/CLOCKS_PER_SEC)*1000;
+                        printf("C1 stops at %f\n",temp_time);
+                        //C1_Last = clock();
+                        //C1_Last_Time = (C1_Last/CLOCKS_PER_SEC)*1000;
                     }
                 
                      if(strcmp(D2,"Die")!=0){
@@ -458,6 +472,8 @@ int main()
                         read(p3[0],&c3_sum,sizeof(c3_sum));
                         close(p3[0]); 
                         printf("C3 output: %lld\n",c3_sum);
+
+                        printf("Wait time by C1: %f\n",C1_Wait_Time);
             }
              
         }
