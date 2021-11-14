@@ -335,7 +335,7 @@ int main()
 
         //Concurrent execution of both threads
         pthread_create(&C1_execution_thread , NULL, C1_execution_function,INT_TO_VOID(n1));
-        sleep(2);
+        //sleep(2);
 		pthread_create(&C1_monitor_thread , NULL, C1_monitor_function,NULL);
     	
 
@@ -367,7 +367,7 @@ int main()
             //C2
    
 			pthread_t C2_execution_thread;
-            sleep(1);
+            //sleep(1);
             pthread_t C2_monitor_thread;
 
 			//Concurrent execution of both threads
