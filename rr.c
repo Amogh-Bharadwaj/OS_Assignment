@@ -80,7 +80,7 @@ void* C3_execution_function(void *arg){
     FILE* fp;
     fp = fopen("sample.txt" , "r");
     char str[8];
-	long sum=0;
+	unsigned long long sum=0;
     
     int n3 = VOID_TO_INT(arg);
 
@@ -415,7 +415,7 @@ int main()
             else{
 
                 //wait(NULL);
-                int c1_sum,c3_sum;
+                unsigned long long int c1_sum,c3_sum;
 
                 while(1){
                     
