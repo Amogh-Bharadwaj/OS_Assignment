@@ -251,6 +251,8 @@ int main()
 {   //Process PIDs.
 	int pid,pid1,pid2;
 
+    int time_quantum;
+
     // Pipes.
     int p1[2],p2[2],p3[2];
     char buf[40];
@@ -279,10 +281,12 @@ int main()
    strcpy(D3,"Live");
 
    time_t C1_Arrival_Time,C2_Arrival_Time,C3_Arrival_Time;
-
+   
+   printf("Enter the time quantum: ");
+   scanf("%d",&time_quantum);
 
    int n1,n2,n3;
-   printf("Enter n1: ");
+   printf("\nEnter n1: ");
    scanf("%d",&n1);
 
    printf("\nEnter n2: ");
@@ -290,7 +294,8 @@ int main()
 
    printf("\nEnter n3: ");
    scanf("%d",&n3);
-
+   
+   
 
     
     
@@ -434,11 +439,16 @@ int main()
                         
                         time_t start1;
                         time(&start1);
+
                         c1s[s1++] = (start1 - C1_Arrival_Time);
                         C1_Wait_Time += ((start1 - C1_Finish_Time)*1000);
+
                         strcpy(MC1_memory,"Start");
-                        sleep(2);
+
+                        sleep(time_quantum);
+
                         strcpy(MC1_memory,"Stop");
+
                         time(&C1_Finish_Time);
                     }
                     
@@ -446,11 +456,16 @@ int main()
                      if(strcmp(D2,"Die")!=0){
                         time_t start2;
                         time(&start2);
+
                         c2s[s2++] = (start2 - C2_Arrival_Time);
                         C2_Wait_Time += ((start2 - C2_Finish_Time)*1000);
+
                         strcpy(MC2_memory,"Start");
-                        sleep(2);
+
+                        sleep(time_quantum);
+
                         strcpy(MC2_memory,"Stop");
+
                         time(&C2_Finish_Time);
                     }
                   
@@ -458,11 +473,16 @@ int main()
                      if(strcmp(D3,"Die")!=0){
                         time_t start3;
                         time(&start3);
+
                         c3s[s3++] = (start3 - C3_Arrival_Time);
                         C3_Wait_Time += ((start3 - C3_Finish_Time)*1000);
+
                         strcpy(MC3_memory,"Start");
-                        sleep(2);
+
+                        sleep(time_quantum);
+
                         strcpy(MC3_memory,"Stop");
+                        
                         time(&C3_Finish_Time);
                     }
                    
