@@ -76,7 +76,7 @@ void* C3_execution_function(void *arg){
     FILE* fp;
     fp = fopen("sample.txt" , "r");
     char str[8];
-	long sum=0;
+	long long sum=0;
 
     int n3 = VOID_TO_INT(arg);
 
@@ -379,7 +379,7 @@ int main()
             }
             else{
 
-                int c1_sum,c3_sum;
+                long long c1_sum,c3_sum;
 
                 clock_t C1_Start ,C1_Finish_Time;
                 double C1_Turnaround_Time,C1_Wait_Time;
