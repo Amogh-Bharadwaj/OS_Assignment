@@ -76,7 +76,7 @@ void* C3_execution_function(void *arg){
     FILE* fp;
     fp = fopen("sample.txt" , "r");
     char str[8];
-	long sum=0;
+	long long sum=0;
 
     int n3 = VOID_TO_INT(arg);
 
@@ -379,7 +379,7 @@ int main()
             }
             else{
 
-                int c1_sum,c3_sum;
+                long long c1_sum,c3_sum;
 
                 clock_t C1_Start ,C1_Finish_Time;
                 double C1_Turnaround_Time,C1_Wait_Time;
@@ -394,7 +394,7 @@ int main()
                 // Getting message via pipe from C1.
                 read(p1[0],&c1_sum,sizeof(c1_sum));
                 close(p1[0]);
-                printf("C1 output: %d\n",c1_sum);
+                printf("C1 output: %lld\n",c1_sum);
 
                 C1_Finish_Time=clock();
 
@@ -434,7 +434,7 @@ int main()
                 // Getting message via pipe from C3.
                 read(p3[0],&c3_sum,sizeof(c3_sum));
                 close(p3[0]); 
-                printf("C3 output: %d\n",c3_sum);
+                printf("C3 output: %lld\n",c3_sum);
 
                 C3_Finish_Time=clock();
 
