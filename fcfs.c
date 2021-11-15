@@ -152,7 +152,7 @@ void* C2_monitor_function(void *arg){
     while(strcmp(MC2_memory,"Die")!=0){ 
 
         if(MC2_memory=="Die"){
-            printf("[C1 MONITOR]: Im out\n");
+            printf("[C2 MONITOR]: Im out\n");
             pthread_mutex_unlock(&mutex);
             break;
         }
