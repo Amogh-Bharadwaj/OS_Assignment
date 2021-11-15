@@ -6,7 +6,7 @@
 
 int main(){
     char s[5];
-    printf("Enter choice of scheduling algorithm - (fcfs (or) rr): ");
+    printf("Enter choice of scheduling algorithm : [fcfs/rr] ");
     scanf("%s",s);
     
     // Running the required executable as per user input.
