@@ -24,6 +24,7 @@
 pthread_cond_t T1=PTHREAD_COND_INITIALIZER,T2=PTHREAD_COND_INITIALIZER,T3=PTHREAD_COND_INITIALIZER;
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
+// Union and 2 functions to convert to and from (int) and (void*) data types.
 union void_cast {
     void* ptr;
     int value;
@@ -41,12 +42,18 @@ void* INT_TO_VOID(int value) {
     return u.ptr;
 }
 
+// Global variables for monitoring activity.
 int play1=0,play2=0,play3=0;
 
+// Shared memory function
 void* share_memory(size_t size) {
-    int protection = PROT_READ | PROT_WRITE;
-    int visibility = MAP_SHARED | MAP_ANONYMOUS;
-    return mmap(NULL, size, protection, visibility, -1, 0);
+    int protection = PROT_READ | PROT_WRITE; // Gives read and write permissions.
+    int visibility = MAP_SHARED | MAP_ANONYMOUS; // Visible to these processes but not third party processes.
+
+
+    // mmap() will map the process to a memory, if that memory location is 
+    // already occupied, it will map it to the next one.
+    return mmap(NULL, size, protection, visibility, -1, 0); 
 }
 
 char* C1_memory; // Interthread communication (monitor thread of C1 to execution thread of C1).
@@ -57,7 +64,7 @@ char* MC1_memory; // This is for Main to the three processes.
 char* MC2_memory;
 char* MC3_memory;
 
-char* D1;
+char* D1;  // To communicate the death of all processes.
 char* D2;
 char* D3;
 
@@ -75,17 +82,19 @@ int sti(char s[]){
     return num;
 }
 
+// Task thread for C3.
 void* C3_execution_function(void *arg){  
     
     // Opening n3 text file.
     FILE* fp;
-    fp = fopen("sample.txt" , "r");
+    fp = fopen("n3.txt" , "r");
     char str[8];
 	unsigned long long sum=0;
     
     int n3 = VOID_TO_INT(arg);
-
+    
     while(fgets(str,10,fp)!=NULL && n3--){
+
         // C3 is asleep until monitor tells to wake up.
 		pthread_mutex_lock(&mutex);
         while(!play3){pthread_cond_wait(&T3,&mutex);}
@@ -96,9 +105,6 @@ void* C3_execution_function(void *arg){
         pthread_mutex_unlock(&mutex);
     }
     
-    //strcpy(MC3_memory,"Die");
-    //printf("Reached here. MC3_Memory: %s\n",MC3_memory);
-
     return (void *)sum;
 }
 
@@ -133,7 +139,7 @@ void* C2_execution_function(void *arg)
 {   
     // Opening n2 file.
     FILE* fp1;
-    fp1 = fopen("sample.txt","r");
+    fp1 = fopen("n2.txt","r");
     char str[8];
 
     int n2 = VOID_TO_INT(arg);
@@ -150,10 +156,6 @@ void* C2_execution_function(void *arg)
         pthread_mutex_unlock(&mutex);
     }
 
-    //return ;
-    
-    // Intimating to monitor that C2 is over.
-	//strcpy(D2,"Die");
 }
 
 void* C2_monitor_function(void *arg){
@@ -190,15 +192,13 @@ void* C2_monitor_function(void *arg){
 void* C1_execution_function(void* argument){
 
     long long arg = 0;
-    //printf("[C1]: Enter number of values when execution thread isn't sleeping:\n");
-    
+   
     int n1 = VOID_TO_INT(argument);
     
     int arr[n1];
     for(int i=0;i<n1;i++)arr[i]=(rand()%1000000);
     for(int i=0;i<n1;i++){ 
-        // Unless monitor tells me to start, I will be asleep.
-        
+        // Unless monitor tells C1 to start, it will be asleep.
         pthread_mutex_lock(&mutex);
         while(!play1){pthread_cond_wait(&T1,&mutex);}
         
@@ -207,17 +207,13 @@ void* C1_execution_function(void* argument){
         arg+=arr[i];  
         pthread_mutex_unlock(&mutex);
     }
-    //printf("[C1]: SUM: %lld\n",arg);
-   
-    // Intimating to monitor that execution is over.
     
     return (void *)arg;
 }
 
 void* C1_monitor_function(){
-    // If C1 is over, monitor thread should terminate.
-   
     
+    // If C1 is over, monitor thread should terminate. 
     while(strcmp(D1,"Die")!=0){    
 
         //printf("MC1 memory: %s\n",MC1_memory);
@@ -227,10 +223,9 @@ void* C1_monitor_function(){
             break;
         }
 
-       
         // If scheduler says to stop.
         if(strcmp(MC1_memory,"Stop")==0){
-            //printf("Locking C1...\n");
+            // Stopping task thread.
             pthread_mutex_lock(&mutex);
             play1 = 0;
             pthread_mutex_unlock(&mutex);
@@ -238,7 +233,7 @@ void* C1_monitor_function(){
        
         // If scheduler says to start.
         if(strcmp(MC1_memory,"Start")==0){
-            //printf("Unlocking..\n");
+            //Starting/resuming task thread.
             pthread_mutex_lock(&mutex);
             play1 = 1;
             pthread_cond_signal(&T1);
@@ -257,10 +252,9 @@ int main()
     int p1[2],p2[2],p3[2];
     char buf[40];
 
-    // List of shared memories. 
-    // C1,C2,C3 are for monitor-to-execution thread communication.
-
-   // MC1,MC2,MC3 are main-to-process communication
+    
+    
+   // Shared memories MC1,MC2,MC3 are main-to-process communication
    MC1_memory = share_memory(128);
    strcpy(MC1_memory,"Stop");
 
@@ -270,7 +264,7 @@ int main()
    MC3_memory = share_memory(128);
    strcpy(MC3_memory,"Stop");
 
-   // To kill the threads.
+   // Shared memory to kill the threads.
    D1 = share_memory(128);
    strcpy(D1,"Live");
 
@@ -279,12 +273,17 @@ int main()
 
    D3 = share_memory(128);
    strcpy(D3,"Live");
+   
 
+   // Part of sys/time.h
+   // Measures seconds elapsed since Jan 1970.
    time_t C1_Arrival_Time,C2_Arrival_Time,C3_Arrival_Time;
    
+   // Inputting time quantum.
    printf("Enter the time quantum: ");
    scanf("%d",&time_quantum);
-
+   
+   // Workload input.
    int n1,n2,n3;
    printf("\nEnter n1: ");
    scanf("%d",&n1);
@@ -295,9 +294,6 @@ int main()
    printf("\nEnter n3: ");
    scanf("%d",&n3);
    
-   
-
-    
     
     //Creating pipes.
     if (pipe(p1)==-1)
@@ -316,14 +312,12 @@ int main()
 		return 1;
 	}
  
- 
-	// variable pid will store the
-	// value returned from fork() system call
+    // Noting arrival time of C1.
     time(&C1_Arrival_Time);
 	pid = fork();
  
 	// If fork() returns zero then it
-	// means it is child process.
+	// means it is a child process.
 	if (pid == 0) {
         //C1
 
@@ -334,96 +328,92 @@ int main()
 
         //Concurrent execution of both threads
         pthread_create(&C1_execution_thread , NULL, C1_execution_function,INT_TO_VOID(n1));
-        //sleep(2);
 		pthread_create(&C1_monitor_thread , NULL, C1_monitor_function,NULL);
     	
 
 		//pthread_join waits for the threads passed as argument to finish(terminate).
     	pthread_join(C1_execution_thread , &status); //The value returned by the execution function will be stored in status.
-    	//pthread_join(C1_monitor_thread, NULL); 
-
+    
         long sum = (long)status; // Type casting status to long and storing in sum.
-
-        //printf("Sum inside C1 child: %ld\n",sum);
-        //printf("------------------------------------------------\n");
 
         close(p1[0]);
         write(p1[1],&sum,sizeof(sum)); // Writing sum to pipe.
         close(p1[1]);
-        strcpy(D1,"Die");
+
+        strcpy(D1,"Die"); // Intimating to M and monitor that task thread is dead.
        
 
     }
 
         else {
-        //wait(NULL);
- 
-
+        
+        // Noting arrival time of C2.
         time(&C2_Arrival_Time);
 		pid1 = fork();
 		if (pid1 == 0) {
             //C2
 
-            time(&C2_Arrival_Time);
-   
 			pthread_t C2_execution_thread;
-            //sleep(1);
             pthread_t C2_monitor_thread;
 
 			//Concurrent execution of both threads
             pthread_create(&C2_execution_thread , NULL, C2_execution_function,INT_TO_VOID(n2));
 			pthread_create(&C2_monitor_thread , NULL, C2_monitor_function,NULL);
     		
-
             //pthread_join waits for the threads passed as argument to finish(terminate).
     		pthread_join(C2_execution_thread , NULL);
-    		//pthread_join(C2_monitor_thread, NULL);
+    		
             close(p2[0]);
             write(p2[1],"Done Printing",14);
             close(p2[1]);
-            strcpy(D2,"Die");
+
+            strcpy(D2,"Die"); //Intimating to M and monitor that C2 is dead.
            
 		}
 		else {
-            //wait(NULL);
+            // Noting arrival time of C3.
             time(&C3_Arrival_Time); 
             
             
 			pid2 = fork();
 			if (pid2 == 0) { 
                 //C3
-                             
-
+                            
 				pthread_t C3_monitor_thread;
 				pthread_t C3_execution_thread;
                 
                 void* status;
 
                 //Concurrent execution of both threads
-				
     			pthread_create(&C3_execution_thread , NULL, C3_execution_function,INT_TO_VOID(n3));
                 pthread_create(&C3_monitor_thread , NULL, C3_monitor_function,NULL);
 
                 pthread_join(C3_execution_thread , &status);
                 long sum2 = (long)status;
-    		    //pthread_join(C3_monitor_thread, NULL);
+    		
 
                 close(p3[0]);
                 write(p3[1],&sum2,sizeof(sum2));
                 close(p3[1]);
-                strcpy(D3,"Die");
+
+                strcpy(D3,"Die"); // Intimating to M and the monitor that C3 is dead.
             }
             else{
 
-                //wait(NULL);
+                // SCHEDULER FOR ROUND ROBIN
+
+                // To store outputs from pipes from C1 and C3.
                 unsigned long long int c1_sum,c3_sum;
 
+                // Initialising wait times.
                 long double C1_Wait_Time=(time(NULL)-C1_Arrival_Time)*1000;
                 long double C2_Wait_Time=(time(NULL)-C2_Arrival_Time)*1000;
                 long double C3_Wait_Time=(time(NULL)-C3_Arrival_Time)*1000;
-
+                
+                // Initialising finish times.
                 time_t C1_Finish_Time=C1_Arrival_Time,C2_Finish_Time=C2_Arrival_Time,C3_Finish_Time=C3_Arrival_Time;
-
+                
+                // Arrays to store start times of each process.
                 int s1,s2,s3;
                 long int c1s[1000];
                 long int c2s[1000];
@@ -434,21 +424,22 @@ int main()
 
                 while(1){
                     
-                   
                     if(strcmp(D1,"Die")!=0){
                         
+                        // Noting start time of this interval.
                         time_t start1;
                         time(&start1);
 
-                        c1s[s1++] = (start1 - C1_Arrival_Time);
-                        C1_Wait_Time += ((start1 - C1_Finish_Time)*1000);
+                        c1s[s1++] = (start1 - C1_Arrival_Time); //Storing the start time.
+                        C1_Wait_Time += ((start1 - C1_Finish_Time)*1000); // Adding this intervals wait time.
 
                         strcpy(MC1_memory,"Start");
 
                         sleep(time_quantum);
 
                         strcpy(MC1_memory,"Stop");
-
+                        
+                        // Noting finish time of this interval
                         time(&C1_Finish_Time);
                     }
                     
@@ -505,7 +496,9 @@ int main()
                         read(p3[0],&c3_sum,sizeof(c3_sum));
                         close(p3[0]); 
                         printf("C3 output: %lld\n\n",c3_sum);
+                       
 
+                       // Gant chart data output.
                         printf("\n------------------------------------\n");
                         printf("Output: \n");
                         printf("C1 started at times:\n");
