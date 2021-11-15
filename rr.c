@@ -203,6 +203,11 @@ void* C1_execution_function(void* argument){
         while(!play1){pthread_cond_wait(&T1,&mutex);}
         
         //Critical section
+
+        // Optional input method.
+        //int x;
+        //scanf("%d",x);
+        
         printf("[C1]: Adding..\n");
         arg+=arr[i];  
         pthread_mutex_unlock(&mutex);
