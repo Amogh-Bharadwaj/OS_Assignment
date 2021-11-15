@@ -150,7 +150,7 @@ void* C2_execution_function(void *arg)
         pthread_mutex_unlock(&mutex);
     }
 
-    return ;
+    //return ;
     
     // Intimating to monitor that C2 is over.
 	//strcpy(D2,"Die");
