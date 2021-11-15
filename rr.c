@@ -91,7 +91,7 @@ void* C3_execution_function(void *arg){
         while(!play3){pthread_cond_wait(&T3,&mutex);}
         
         // Critical section
-        printf("[C3]: Adding..\n");
+        //printf("[C3]: Adding..\n");
         sum += atoi(str);
         pthread_mutex_unlock(&mutex);
     }
@@ -203,7 +203,7 @@ void* C1_execution_function(void* argument){
         while(!play1){pthread_cond_wait(&T1,&mutex);}
         
         //Critical section
-        printf("[C1]: Adding..\n");
+        //printf("[C1]: Adding..\n");
         arg+=arr[i];  
         pthread_mutex_unlock(&mutex);
     }
@@ -428,6 +428,8 @@ int main()
                 long int c1s[1000];
                 long int c2s[1000];
                 long int c3s[1000];
+                int s4=0;
+                int schedule[3000];
 
              
                 
@@ -442,6 +444,7 @@ int main()
 
                         c1s[s1++] = (start1 - C1_Arrival_Time);
                         C1_Wait_Time += ((start1 - C1_Finish_Time)*1000);
+                        schedule[s4++]=1;
 
                         strcpy(MC1_memory,"Start");
 
@@ -459,6 +462,7 @@ int main()
 
                         c2s[s2++] = (start2 - C2_Arrival_Time);
                         C2_Wait_Time += ((start2 - C2_Finish_Time)*1000);
+                        schedule[s4++]=2;
 
                         strcpy(MC2_memory,"Start");
 
@@ -476,6 +480,7 @@ int main()
 
                         c3s[s3++] = (start3 - C3_Arrival_Time);
                         C3_Wait_Time += ((start3 - C3_Finish_Time)*1000);
+                        schedule[s4++]=3;
 
                         strcpy(MC3_memory,"Start");
 
@@ -490,47 +495,64 @@ int main()
                     if((strcmp(D1,"Die")==0) && (strcmp(D2,"Die")==0) && (strcmp(D3,"Die")==0))break;
                 }
 
-
+                        printf("\n-------------------------------------------\nOutput:\n");
                         // Getting message via pipe from C1.
                         read(p1[0],&c1_sum,sizeof(c1_sum));
                         close(p1[0]);
-                        printf("C1 output: %lld\n",c1_sum);
+                        printf("\nC1 output: %lld\n",c1_sum);
 
                         // Getting message via pipe from C2.
                         read(p2[0],buf,14);
                         close(p2[0]);
-                        printf("C2 output: %s\n",buf);
+                        //printf("C2 output: %s\n",buf);
 
                         // Getting message via pipe from C3.
                         read(p3[0],&c3_sum,sizeof(c3_sum));
                         close(p3[0]); 
                         printf("C3 output: %lld\n\n",c3_sum);
 
-                        printf("\n------------------------------------\n");
-                        printf("Output: \n");
-                        printf("C1 started at times:\n");
-                        for(int i=0;i<s1;i++){
-                            printf("t= %ld s\n",c1s[i]);
-                        }
+                        
+                        printf("Output times: \n");
+                        //printf("C1 started at times:\n");
+                        //for(int i=0;i<s1;i++){
+                        //    printf("t= %ld s\n",c1s[i]);
+                        //}
                         printf("\nC1 Waiting Time: %Lf s\n",C1_Wait_Time/1000);
                         printf("C1 Turnaround Time: %ld s\n\n\n",(C1_Finish_Time - C1_Arrival_Time));
 
-                        printf("C2 started at times:\n");
-                        for(int i=0;i<s2;i++){
-                            printf("t= %ld s\n",c2s[i]);
-                        }
+                        //printf("C2 started at times:\n");
+                        //for(int i=0;i<s2;i++){
+                        //    printf("t= %ld s\n",c2s[i]);
+                        //}
 
 
                         printf("\nC2 Waiting Time: %Lf s\n",C2_Wait_Time/1000);
                         printf("C2 Turnaround Time: %ld s\n\n\n",(C2_Finish_Time - C2_Arrival_Time));
 
-                         printf("C3 started at times:\n");
-                        for(int i=0;i<s3;i++){
-                            printf("t= %ld s\n",c3s[i]);
-                        }
+                        //printf("C3 started at times:\n");
+                        //for(int i=0;i<s3;i++){
+                        //    printf("t= %ld s\n",c3s[i]);
+                        //}
 
                         printf("\nC3 Waiting Time: %Lf s\n",C3_Wait_Time/1000);
                         printf("C3 Turnaround Time: %ld s\n\n\n",(C3_Finish_Time - C3_Arrival_Time));
+
+                        int h1=0,h2=0,h3=0;
+                        for(int i=0;i<s4;i++){
+                            if(schedule[i]==1){
+                                printf("C1 starts at ");
+                                printf("%ld\n",c1s[h1]);
+                                h1++;
+                            } else if(schedule[i]==2){
+                                printf("C2 starts at ");
+                                printf("%ld\n",c2s[h2]);
+                                h2++;
+                            } else {
+                                printf("C3 starts at ");
+                                printf("%ld\n",c3s[h3]);
+                                h3++;
+                            }
+                        }
             }
              
         }

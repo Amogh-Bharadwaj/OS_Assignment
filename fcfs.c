@@ -83,10 +83,13 @@ void* C3_execution_function(void *arg){
     while(fgets(str,10,fp)!=NULL && n3--){
         // C3 is asleep until monitor tells to wake up.
 		pthread_mutex_lock(&mutex);
-        while(!play3){printf("[C3]: Locked by monitor...\n");pthread_cond_wait(&T3,&mutex);}
+        while(!play3){
+            //printf("[C3]: Locked by monitor...\n");
+            pthread_cond_wait(&T3,&mutex);
+        }
         
         // Critical section
-        printf("[C3]: Adding....\n");
+        //printf("[C3]: Adding....\n");
         sum += atoi(str);
         pthread_mutex_unlock(&mutex);
     }
@@ -134,7 +137,10 @@ void* C2_execution_function(void *arg)
     
 	while(fgets(str,10,fp1)!=NULL && n2--){
         pthread_mutex_lock(&mutex);
-        while(!play2){printf("[C2]: Locked by monitor...\n");pthread_cond_wait(&T2,&mutex);}
+        while(!play2){
+            //printf("[C2]: Locked by monitor...\n");
+            pthread_cond_wait(&T2,&mutex);
+        }
             
         //Critical section
         int num = atoi(str);
@@ -188,10 +194,13 @@ void* C1_execution_function(void* argument){
         // Unless monitor tells me to start, I will be asleep.
         
         pthread_mutex_lock(&mutex);
-        while(!play1){printf("[C1]: Locked by monitor...\n");pthread_cond_wait(&T1,&mutex);}
+        while(!play1){
+            //printf("[C1]: Locked by monitor...\n");
+            pthread_cond_wait(&T1,&mutex);
+        }
         
         //Critical section
-        printf("[C1]: Adding\n");
+        //printf("[C1]: Adding\n");
         arg+=arr[i];  
         pthread_mutex_unlock(&mutex);
     }
@@ -448,8 +457,10 @@ int main()
                 printf("\n-------------------------------------------\nOutput:\n");
 
                 printf("C1 output: %lld\n",c1_sum);
-                printf("C2 output: %s\n",buf);
+                //printf("C2 output: %s\n",buf);
                 printf("C3 output: %lld\n\n",c3_sum);
+
+                printf("Output times: \n");
 
                 printf("C1 arrived at t = %f ms\n",C1_Arrival_Time);
                 printf("C1 starts at t = %f ms\n",C1_Wait_Time);
