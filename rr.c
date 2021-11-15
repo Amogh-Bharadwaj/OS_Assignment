@@ -251,7 +251,7 @@ int main()
 {   //Process PIDs.
 	int pid,pid1,pid2;
 
-    int time_quantum;
+    float time_quantum;
 
     // Pipes.
     int p1[2],p2[2],p3[2];
@@ -286,7 +286,7 @@ int main()
    
    // Inputting time quantum.
    printf("Enter the time quantum: ");
-   scanf("%d",&time_quantum);
+   scanf("%f",&time_quantum);
    
    // Workload input.
    int n1,n2,n3;
